@@ -73,7 +73,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 55
+    m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -187,19 +187,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -7118067643153988267, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -5278515009963164358, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -4996735256098167811, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -3879411161694293949, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Name
@@ -207,35 +207,35 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2004609234906838782, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3019468886486494926, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3854168651712727665, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4904802150750497732, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5833154634548689788, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7457770421956729680, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7560071346138963041, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8067338045450684400, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       propertyPath: m_Layer
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -262,7 +262,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6867642359195904925}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -5514297355783180107}
   m_SourcePrefab: {fileID: 100100000, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
+--- !u!4 &2180259120472599930 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -3527777288304175301, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
+  m_PrefabInstance: {fileID: 5857783578940897857}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6251487061981666730 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: a45b7e374556c174ba757eeffc0aa78c, type: 3}
@@ -315,7 +323,7 @@ MonoBehaviour:
   gravity: -9.81
   playerCamera: {fileID: 5297399516468576171}
   mouseSensitivity: 100
-  animator: {fileID: 0}
+  animator: {fileID: 8891941695185193079}
 --- !u!95 &8891941695185193079
 Animator:
   serializedVersion: 7
@@ -402,3 +410,17 @@ MonoBehaviour:
   m_SynchronizeLayers:
   - SynchronizeType: 0
     LayerIndex: 0
+--- !u!114 &-5514297355783180107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6740321773510608656}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4069b22cdb595b64ca9cf64af1997f22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  playerCamera: {fileID: 5297399516468576171}
+  playerModel: {fileID: 2180259120472599930}
