@@ -15,6 +15,7 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 
 	[Header("Animation")]
 	public Animator animator; // Gán Animator component vào đây
+	public Transform playerModel;
 
 	private CharacterController controller;
 	private Vector3 playerVelocity;
@@ -32,25 +33,35 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			animator = GetComponent<Animator>();
 		}
 
-		// 3. Đây là phần quan trọng để phân biệt "mình" và "người khác"
+		// 3. Gộp logic từ cả hai file vào đây
 		if (photonView.IsMine)
 		{
 			// Nếu là nhân vật CỦA TÔI:
 			// Khóa con trỏ chuột
 			Cursor.lockState = CursorLockMode.Locked;
 			Cursor.visible = false;
+
+			// --- PHẦN CODE ẨN MODEL (từ PlayerSetup) ---
+			int localPlayerLayer = LayerMask.NameToLayer("LocalPlayerBody");
+			if (playerCamera != null)
+			{
+				playerCamera.GetComponent<Camera>().cullingMask &= ~(1 << localPlayerLayer);
+			}
+			if (playerModel != null)
+			{
+				SetLayerRecursively(playerModel.gameObject, localPlayerLayer);
+			}
 		}
 		else
 		{
 			// Nếu là nhân vật CỦA NGƯỜI KHÁC:
-			// Tắt camera đi để không bị 2 camera
+			// Tắt camera
 			playerCamera.gameObject.SetActive(false);
 
-			// Tắt CharacterController đi để nó không
-			// tự áp dụng trọng lực, cản trở việc đồng bộ
+			// Tắt CharacterController
 			controller.enabled = false;
 
-			// Tắt AudioListener (nếu có trên camera)
+			// Tắt AudioListener
 			AudioListener audioListener = playerCamera.GetComponent<AudioListener>();
 			if (audioListener != null)
 			{
@@ -138,5 +149,16 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 
 		playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
 		transform.Rotate(Vector3.up * mouseX);
+	}
+
+	void SetLayerRecursively(GameObject obj, int newLayer)
+	{
+		if (obj == null) return;
+		obj.layer = newLayer;
+		foreach (Transform child in obj.transform)
+		{
+			if (child == null) continue;
+			SetLayerRecursively(child.gameObject, newLayer);
+		}
 	}
 }
