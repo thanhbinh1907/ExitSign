@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
+using Photon.Pun; // 1. Thêm thư viện Photon
 
 [RequireComponent(typeof(CharacterController))]
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehaviourPun
 {
 	[Header("Player Settings")]
 	public float walkSpeed = 5.0f;
@@ -17,9 +18,8 @@ public class PlayerMovement : MonoBehaviour
 
 	private CharacterController controller;
 	private Vector3 playerVelocity;
-	private float xRotation = 0f; // Biến lưu góc xoay lên/xuống của camera
-	
-	// Animation variables
+	private float xRotation = 0f;
+
 	private bool isWalking = false;
 	private bool isRunning = false;
 
@@ -27,44 +27,69 @@ public class PlayerMovement : MonoBehaviour
 	{
 		controller = GetComponent<CharacterController>();
 
-		// Tự động lấy Animator nếu chưa được gán
 		if (animator == null)
 		{
 			animator = GetComponent<Animator>();
 		}
 
-		// Khóa con trỏ chuột vào giữa màn hình và ẩn nó đi
-		Cursor.lockState = CursorLockMode.Locked;
-		Cursor.visible = false;
+		// 3. Đây là phần quan trọng để phân biệt "mình" và "người khác"
+		if (photonView.IsMine)
+		{
+			// Nếu là nhân vật CỦA TÔI:
+			// Khóa con trỏ chuột
+			Cursor.lockState = CursorLockMode.Locked;
+			Cursor.visible = false;
+		}
+		else
+		{
+			// Nếu là nhân vật CỦA NGƯỜI KHÁC:
+			// Tắt camera đi để không bị 2 camera
+			playerCamera.gameObject.SetActive(false);
+
+			// Tắt CharacterController đi để nó không
+			// tự áp dụng trọng lực, cản trở việc đồng bộ
+			controller.enabled = false;
+
+			// Tắt AudioListener (nếu có trên camera)
+			AudioListener audioListener = playerCamera.GetComponent<AudioListener>();
+			if (audioListener != null)
+			{
+				audioListener.enabled = false;
+			}
+		}
 	}
 
 	void Update()
 	{
-		HandleMovement();
-		HandleMouseLook();
-		UpdateAnimations();
+		// 4. DÒNG CODE QUAN TRỌNG NHẤT
+		// Chỉ chạy code di chuyển, xoay camera, và cập nhật animation
+		// NẾU ĐÂY LÀ NHÂN VẬT CỦA TÔI
+		if (photonView.IsMine)
+		{
+			HandleMovement();
+			HandleMouseLook();
+			UpdateAnimations();
+		}
+
+		// Nếu không phải "IsMine", thì toàn bộ việc di chuyển
+		// và xoay người sẽ do PhotonTransformView lo.
+		// Animation sẽ do PhotonAnimatorView lo.
 	}
 
-	// Hàm xử lý di chuyển bằng bàn phím
+	// Hàm xử lý di chuyển bằng bàn phím (không thay đổi)
 	void HandleMovement()
 	{
-		// Kiểm tra xem nhân vật có đang đứng trên mặt đất không
 		if (controller.isGrounded && playerVelocity.y < 0)
 		{
 			playerVelocity.y = -2f;
 		}
 
-		// Lấy input từ phím W,A,S,D
 		float x = Input.GetAxis("Horizontal");
 		float z = Input.GetAxis("Vertical");
 
-		// Kiểm tra xem có di chuyển không
 		bool isMoving = (x != 0 || z != 0);
-
-		// Kiểm tra xem có nhấn Shift không (để chạy)
 		bool isShiftHeld = Input.GetKey(KeyCode.LeftShift);
 
-		// Cập nhật animation states
 		if (isMoving)
 		{
 			if (isShiftHeld)
@@ -84,21 +109,15 @@ public class PlayerMovement : MonoBehaviour
 			isRunning = false;
 		}
 
-		// Tạo vector di chuyển dựa trên hướng hiện tại của nhân vật
 		Vector3 move = transform.right * x + transform.forward * z;
-
-		// Chọn tốc độ di chuyển dựa trên trạng thái
 		float currentSpeed = isRunning ? runSpeed : walkSpeed;
-
-		// Thực hiện di chuyển
 		controller.Move(move.normalized * currentSpeed * Time.deltaTime);
 
-		// Áp dụng trọng lực
 		playerVelocity.y += gravity * Time.deltaTime;
 		controller.Move(playerVelocity * Time.deltaTime);
 	}
 
-	// Hàm cập nhật animations
+	// Hàm cập nhật animations (không thay đổi)
 	void UpdateAnimations()
 	{
 		if (animator != null)
@@ -108,23 +127,16 @@ public class PlayerMovement : MonoBehaviour
 		}
 	}
 
-	// Hàm xử lý xoay camera bằng chuột
+	// Hàm xử lý xoay camera bằng chuột (không thay đổi)
 	void HandleMouseLook()
 	{
-		// Lấy input từ chuột
 		float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
 		float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
-		// Xoay lên/xuống (Pitch)
 		xRotation -= mouseY;
-		// Giới hạn góc nhìn, không cho phép lộn ngược camera
 		xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
-		// Áp dụng góc xoay lên/xuống cho CHỈ CAMERA
 		playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-
-		// Xoay trái/phải (Yaw)
-		// Áp dụng góc xoay trái/phải cho CẢ NGƯỜI NHÂN VẬT
 		transform.Rotate(Vector3.up * mouseX);
 	}
 }
