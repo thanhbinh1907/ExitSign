@@ -85,7 +85,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 			// Thay "TenSceneGame" bằng tên Scene Gameplay của bạn
 			// Ví dụ: "Level_01", "MainGame", "Station"
-			PhotonNetwork.LoadLevel("TenSceneGame");
+			PhotonNetwork.LoadLevel("Gameplay");
 		}
 	}
 
