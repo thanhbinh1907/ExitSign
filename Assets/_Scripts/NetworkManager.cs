@@ -29,9 +29,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 		// 5. SPWAN (TẠO RA) NHÂN VẬT NGAY TẠI ĐÂY
 		// Thay "TenPrefabNhanVat" bằng tên prefab của bạn ở Bước 3
-		float randomX = Random.Range(-5f, 5f); // Ngẫu nhiên X từ -5 đến 5
-		float randomZ = Random.Range(-5f, 5f); // Ngẫu nhiên Z từ -5 đến 5
-		Vector3 spawnPosition = new Vector3(randomX, 1, randomZ);
-		PhotonNetwork.Instantiate("Player", spawnPosition, Quaternion.identity);
+		PhotonNetwork.Instantiate("Player", new Vector3(0, 1, 0), Quaternion.identity);
 	}
 }
