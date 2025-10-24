@@ -2348,7 +2348,7 @@ MonoBehaviour:
   playerNameInput: {fileID: 204426139}
   lobbyPanel: {fileID: 424600593}
   roomListContent: {fileID: 142434097}
-  roomItemPrefab: {fileID: 9002064316745478516, guid: 5a738347ba0cf39468d784fe70081b88, type: 3}
+  roomItemPrefab: {fileID: 5128193034670607481, guid: 17f5bde433b85ef47a894d31ac70b9a9, type: 3}
   noRoomsText: {fileID: 769769752}
   createRoomPanel: {fileID: 175706593}
   createRoomNameInput: {fileID: 1889564887}
@@ -8146,7 +8146,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1864017360
 RectTransform:
   m_ObjectHideFlags: 0
