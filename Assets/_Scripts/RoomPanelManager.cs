@@ -92,25 +92,37 @@ public class RoomPanelManager : MonoBehaviour
 
 	void CreatePlayerItem(string playerName)
 	{
-		if (playerItemPrefab == null || playerListContent == null) return;
+		Debug.Log($"👤 Creating player item for: {playerName}");
+		Debug.Log($"playerItemPrefab is null: {playerItemPrefab == null}");
+		Debug.Log($"playerListContent is null: {playerListContent == null}");
+
+		if (playerItemPrefab == null || playerListContent == null)
+		{
+			Debug.LogError("❌ Cannot create player item - prefab or content is null!");
+			return;
+		}
 
 		GameObject playerItem = Instantiate(playerItemPrefab, playerListContent);
 		playerUIItems.Add(playerItem);
+		Debug.Log($"✅ Player item instantiated for {playerName}");
 
 		// Thiết lập tên player
 		PlayerItem playerItemScript = playerItem.GetComponent<PlayerItem>();
 		if (playerItemScript != null)
 		{
+			Debug.Log($"✅ PlayerItem script found, setting name to: {playerName}");
 			playerItemScript.SetName(playerName);
 
 			// Thêm icon nếu là master client
 			if (playerName == PhotonNetwork.MasterClient.NickName)
 			{
 				playerItemScript.SetAsMasterClient(true);
+				Debug.Log($"👑 {playerName} set as master client");
 			}
 		}
 		else
 		{
+			Debug.LogWarning($"⚠️ PlayerItem script not found, using fallback for: {playerName}");
 			// Fallback: tìm text component
 			TMP_Text nameText = playerItem.GetComponentInChildren<TMP_Text>();
 			if (nameText != null)
@@ -121,8 +133,13 @@ public class RoomPanelManager : MonoBehaviour
 				if (playerName == PhotonNetwork.MasterClient.NickName)
 				{
 					nameText.text += " (Chủ phòng)";
-					nameText.color = Color.yellow; // Highlight master client
+					nameText.color = Color.yellow;
+					Debug.Log($"👑 {playerName} marked as master (fallback)");
 				}
+			}
+			else
+			{
+				Debug.LogError($"❌ No TMP_Text found in PlayerItem for: {playerName}");
 			}
 		}
 	}
