@@ -16,89 +16,127 @@ public class RoomItem : MonoBehaviour
 
 	public void Setup(string roomName, int playerCount, int maxPlayers, bool isPrivate, NetworkManager manager, RoomInfo info)
 	{
-		// Lưu references
 		networkManager = manager;
 		roomInfo = info;
 
-		Debug.Log($"🏠 Setting up RoomItem: {roomName} ({playerCount}/{maxPlayers}) Private: {isPrivate}");
+		Debug.Log($"🏠 Setting up RoomItem: '{roomName}' ({playerCount}/{maxPlayers})");
 
-		// Update UI với null checks
-		if (roomNameText != null)
+		// 🔥 DEBUG VISIBILITY ISSUES
+		Debug.Log($"🔍 === DEBUGGING VISIBILITY ===");
+
+		// Check GameObject active state
+		Debug.Log($"GameObject active: {gameObject.activeInHierarchy}");
+		Debug.Log($"GameObject activeSelf: {gameObject.activeSelf}");
+
+		// Check CanvasGroup
+		CanvasGroup canvasGroup = GetComponent<CanvasGroup>();
+		if (canvasGroup != null)
 		{
-			roomNameText.text = roomName;
-			Debug.Log($"✅ Room name set: {roomNameText.text}");
+			Debug.Log($"CanvasGroup found - Alpha: {canvasGroup.alpha}, Interactable: {canvasGroup.interactable}");
+			canvasGroup.alpha = 1f; // Force visible
+			canvasGroup.interactable = true;
+		}
+
+		// Check background Image alpha
+		Image backgroundImage = GetComponent<Image>();
+		if (backgroundImage != null)
+		{
+			Debug.Log($"Background Image - Alpha: {backgroundImage.color.a}, Color: {backgroundImage.color}");
+			// Force visible background
+			Color bgColor = backgroundImage.color;
+			bgColor.a = 1f;
+			backgroundImage.color = bgColor;
 		}
 		else
 		{
-			Debug.LogError("❌ roomNameText is null in RoomItem!");
+			Debug.LogWarning("⚠️ No background Image found on RoomItem root");
+		}
+
+		// Update and check text colors
+		if (roomNameText != null)
+		{
+			roomNameText.text = roomName;
+			Debug.Log($"Room name text: '{roomNameText.text}' - Color: {roomNameText.color}, Alpha: {roomNameText.color.a}");
+
+			// Force visible text color
+			Color textColor = roomNameText.color;
+			textColor.a = 1f;
+			if (textColor.r + textColor.g + textColor.b < 0.1f) // If too dark
+			{
+				textColor = Color.black;
+			}
+			roomNameText.color = textColor;
+		}
+		else
+		{
+			Debug.LogError("❌ roomNameText is NULL!");
 		}
 
 		if (playersText != null)
 		{
 			playersText.text = $"{playerCount}/{maxPlayers}";
-			Debug.Log($"✅ Players text set: {playersText.text}");
+			Debug.Log($"Players text: '{playersText.text}' - Color: {playersText.color}, Alpha: {playersText.color.a}");
+
+			// Force visible text color
+			Color textColor = playersText.color;
+			textColor.a = 1f;
+			if (textColor.r + textColor.g + textColor.b < 0.1f)
+			{
+				textColor = Color.black;
+			}
+			playersText.color = textColor;
 		}
 		else
 		{
-			Debug.LogError("❌ playersText is null in RoomItem!");
+			Debug.LogError("❌ playersText is NULL!");
 		}
 
-		if (privateIcon != null)
-		{
-			privateIcon.gameObject.SetActive(isPrivate);
-			Debug.Log($"✅ Private icon: {(isPrivate ? "shown" : "hidden")}");
-		}
-		else
-		{
-			Debug.LogWarning("⚠️ privateIcon is null");
-		}
-
+		// Check button
 		if (joinButton != null)
 		{
 			joinButton.onClick.RemoveAllListeners();
 			joinButton.onClick.AddListener(OnJoinClicked);
-			Debug.Log($"✅ Join button setup complete");
-		}
-		else
-		{
-			Debug.LogError("❌ joinButton is null in RoomItem!");
-		}
 
-		// 🔥 THÊM DEBUG POSITION - ĐOẠN NÀY QUAN TRỌNG
-		Debug.Log($"🔍 Checking GameObject state and position...");
-
-		RectTransform rectTransform = GetComponent<RectTransform>();
-		Debug.Log($"🔍 RectTransform found: {rectTransform != null}");
-
-		if (rectTransform != null)
-		{
-			Debug.Log($"📐 Position: {rectTransform.anchoredPosition}");
-			Debug.Log($"📐 Size: {rectTransform.sizeDelta}");
-			Debug.Log($"📐 Scale: {rectTransform.localScale}");
-			Debug.Log($"📐 Active in Hierarchy: {gameObject.activeInHierarchy}");
-			Debug.Log($"📐 Active Self: {gameObject.activeSelf}");
-			Debug.Log($"📐 Parent: {transform.parent?.name ?? "null"}");
-			Debug.Log($"📐 Sibling Index: {transform.GetSiblingIndex()}");
-
-			// Check parent hierarchy
-			Transform current = transform.parent;
-			int level = 0;
-			while (current != null && level < 5)
+			// Check button image
+			Image buttonImage = joinButton.GetComponent<Image>();
+			if (buttonImage != null)
 			{
-				Debug.Log($"📐 Parent Level {level}: {current.name} - Active: {current.gameObject.activeInHierarchy}");
-				current = current.parent;
-				level++;
+				Debug.Log($"Button Image - Alpha: {buttonImage.color.a}, Color: {buttonImage.color}");
+				Color btnColor = buttonImage.color;
+				btnColor.a = 1f;
+				buttonImage.color = btnColor;
 			}
 
-			// Force settings
-			rectTransform.localScale = Vector3.one;
-			gameObject.SetActive(true);
-
-			Debug.Log($"📐 After force - Active: {gameObject.activeInHierarchy}, Scale: {rectTransform.localScale}");
+			// Check button text
+			TMP_Text buttonText = joinButton.GetComponentInChildren<TMP_Text>();
+			if (buttonText != null)
+			{
+				Debug.Log($"Button Text: '{buttonText.text}' - Color: {buttonText.color}");
+				Color btnTextColor = buttonText.color;
+				btnTextColor.a = 1f;
+				if (btnTextColor.r + btnTextColor.g + btnTextColor.b < 0.1f)
+				{
+					btnTextColor = Color.white;
+				}
+				buttonText.color = btnTextColor;
+			}
 		}
-		else
+
+		// Check RectTransform size
+		RectTransform rectTransform = GetComponent<RectTransform>();
+		if (rectTransform != null)
 		{
-			Debug.LogError("❌ RectTransform is NULL!");
+			Debug.Log($"RectTransform - Size: {rectTransform.sizeDelta}, Scale: {rectTransform.localScale}");
+
+			// Force proper size if too small
+			if (rectTransform.sizeDelta.y < 10)
+			{
+				Debug.LogWarning("⚠️ RoomItem height too small, forcing to 80px");
+				rectTransform.sizeDelta = new Vector2(rectTransform.sizeDelta.x, 80);
+			}
+
+			// Force proper scale
+			rectTransform.localScale = Vector3.one;
 		}
 
 		Debug.Log($"🎉 RoomItem setup complete for: {roomName}");
