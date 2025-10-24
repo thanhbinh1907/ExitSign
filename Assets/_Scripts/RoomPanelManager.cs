@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine.UI;
 using Photon.Pun;
 
-public class RoomPanelManager : MonoBehaviour
+public class RoomPanelManager : MonoBehaviourPun
 {
 	[Header("Room Info")]
 	public TMP_Text roomTitleText;
@@ -29,6 +29,9 @@ public class RoomPanelManager : MonoBehaviour
 	private int maxPlayers;
 	private List<GameObject> playerUIItems = new List<GameObject>();
 
+	[Header("Ready System")]
+	private Dictionary<string, bool> playerReadyStates = new Dictionary<string, bool>();
+
 	void Start()
 	{
 		// Thiết lập button listeners
@@ -46,6 +49,8 @@ public class RoomPanelManager : MonoBehaviour
 		{
 			readyButton.onClick.AddListener(OnClickReady);
 		}
+
+		SetupPlayerListLayout();
 	}
 
 	public void SetupRoom(string roomName, int maxPlayers)
@@ -65,16 +70,20 @@ public class RoomPanelManager : MonoBehaviour
 
 	public void UpdatePlayerList(List<string> playerNames, bool isMaster)
 	{
-		// Xóa danh sách cũ
+		Debug.Log($"👥 Updating player list - {playerNames.Count} players");
+
 		ClearPlayerList();
 
-		// Tạo UI item cho từng player
+		// 🔥 RESET READY STATES WHEN PLAYER LIST CHANGES
+		playerReadyStates.Clear();
+
 		foreach (string playerName in playerNames)
 		{
 			CreatePlayerItem(playerName);
+			// Initialize ready state as false
+			playerReadyStates[playerName] = false;
 		}
 
-		// Cập nhật trạng thái UI
 		UpdateMasterClientUI(isMaster);
 		UpdateStartButton();
 		UpdateRoomStatus();
@@ -92,55 +101,56 @@ public class RoomPanelManager : MonoBehaviour
 
 	void CreatePlayerItem(string playerName)
 	{
-		Debug.Log($"👤 Creating player item for: {playerName}");
-		Debug.Log($"playerItemPrefab is null: {playerItemPrefab == null}");
-		Debug.Log($"playerListContent is null: {playerListContent == null}");
+		Debug.Log($"👤 Creating player item for: '{playerName}'");
 
-		if (playerItemPrefab == null || playerListContent == null)
-		{
-			Debug.LogError("❌ Cannot create player item - prefab or content is null!");
-			return;
-		}
+		if (playerItemPrefab == null || playerListContent == null) return;
 
 		GameObject playerItem = Instantiate(playerItemPrefab, playerListContent);
 		playerUIItems.Add(playerItem);
-		Debug.Log($"✅ Player item instantiated for {playerName}");
 
-		// Thiết lập tên player
+		playerItem.SetActive(true);
+		playerItem.transform.SetAsLastSibling();
+
+		// 🔥 DEBUG: NAME MAPPING
+		Debug.Log($"🏷️ PlayerItem created at index {playerUIItems.Count - 1} for player: '{playerName}'");
+
 		PlayerItem playerItemScript = playerItem.GetComponent<PlayerItem>();
 		if (playerItemScript != null)
 		{
-			Debug.Log($"✅ PlayerItem script found, setting name to: {playerName}");
+			playerItemScript.ResetIcons();
 			playerItemScript.SetName(playerName);
 
-			// Thêm icon nếu là master client
-			if (playerName == PhotonNetwork.MasterClient.NickName)
+			// 🔥 STORE ORIGINAL NAME IN PLAYERITEM FOR REFERENCE
+			playerItemScript.originalPlayerName = playerName;
+
+			bool isMasterClient = (playerName == PhotonNetwork.MasterClient.NickName);
+			if (isMasterClient)
 			{
 				playerItemScript.SetAsMasterClient(true);
-				Debug.Log($"👑 {playerName} set as master client");
-			}
-		}
-		else
-		{
-			Debug.LogWarning($"⚠️ PlayerItem script not found, using fallback for: {playerName}");
-			// Fallback: tìm text component
-			TMP_Text nameText = playerItem.GetComponentInChildren<TMP_Text>();
-			if (nameText != null)
-			{
-				nameText.text = playerName;
-
-				// Thêm (Chủ phòng) nếu là master
-				if (playerName == PhotonNetwork.MasterClient.NickName)
-				{
-					nameText.text += " (Chủ phòng)";
-					nameText.color = Color.yellow;
-					Debug.Log($"👑 {playerName} marked as master (fallback)");
-				}
+				Debug.Log($"👑 {playerName} is MASTER CLIENT");
 			}
 			else
 			{
-				Debug.LogError($"❌ No TMP_Text found in PlayerItem for: {playerName}");
+				playerItemScript.SetAsMasterClient(false);
+				Debug.Log($"👤 {playerName} is regular player");
 			}
+
+			// 🔥 DEBUG FINAL DISPLAYED NAME
+			if (playerItemScript.nameText != null)
+			{
+				Debug.Log($"🏷️ Final displayed name: '{playerItemScript.nameText.text}' for original: '{playerName}'");
+			}
+		}
+	}
+
+	System.Collections.IEnumerator RefreshPlayerListLayout()
+	{
+		yield return null; // Wait 1 frame
+
+		if (playerListContent != null)
+		{
+			LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)playerListContent);
+			Debug.Log("✅ Player list layout refreshed");
 		}
 	}
 
@@ -174,25 +184,61 @@ public class RoomPanelManager : MonoBehaviour
 		bool isMaster = PhotonNetwork.IsMasterClient;
 		bool hasEnoughPlayers = PhotonNetwork.CurrentRoom.PlayerCount >= 2;
 
-		// Chỉ hiện start button cho master client
-		startButton.gameObject.SetActive(isMaster);
+		// 🔥 CHECK IF ALL NON-MASTER PLAYERS ARE READY
+		bool allPlayersReady = true;
+		int totalPlayers = PhotonNetwork.CurrentRoom.PlayerCount;
+		int readyCount = 0;
 
-		// Enable/disable dựa trên số người chơi
-		startButton.interactable = isMaster && hasEnoughPlayers;
-
-		// Cập nhật text trên button
-		TMP_Text buttonText = startButton.GetComponentInChildren<TMP_Text>();
-		if (buttonText != null)
+		foreach (var kvp in playerReadyStates)
 		{
-			if (hasEnoughPlayers)
+			string playerName = kvp.Key;
+			bool isReady = kvp.Value;
+
+			// Skip master client
+			if (playerName == PhotonNetwork.MasterClient.NickName) continue;
+
+			if (isReady)
 			{
-				buttonText.text = "Bắt đầu chơi";
+				readyCount++;
 			}
 			else
 			{
-				buttonText.text = "Cần ít nhất 2 người";
+				allPlayersReady = false;
 			}
 		}
+
+		// If only master client in room, can start immediately
+		if (totalPlayers == 1 && isMaster)
+		{
+			allPlayersReady = true;
+		}
+
+		// Show start button only for master
+		startButton.gameObject.SetActive(isMaster);
+
+		// Enable only if conditions met
+		bool canStart = isMaster && hasEnoughPlayers && allPlayersReady;
+		startButton.interactable = canStart;
+
+		// Update button text
+		TMP_Text buttonText = startButton.GetComponentInChildren<TMP_Text>();
+		if (buttonText != null)
+		{
+			if (!hasEnoughPlayers)
+			{
+				buttonText.text = "Cần ít nhất 2 người";
+			}
+			else if (!allPlayersReady)
+			{
+				buttonText.text = $"Đợi sẵn sàng ({readyCount}/{totalPlayers - 1})";
+			}
+			else
+			{
+				buttonText.text = "Bắt đầu chơi";
+			}
+		}
+
+		Debug.Log($"🎮 Start button - CanStart: {canStart}, Ready: {readyCount}/{totalPlayers - 1}");
 	}
 
 	void UpdateRoomStatus()
@@ -276,9 +322,73 @@ public class RoomPanelManager : MonoBehaviour
 
 	public void OnClickReady()
 	{
-		// Tùy chọn: implement ready system
-		// Có thể dùng Custom Properties để track ready state
-		Debug.Log("Ready button clicked - implement ready system here");
+		Debug.Log("🎯 Ready button clicked");
+
+		string myNickname = PhotonNetwork.NickName;
+		bool currentReadyState = playerReadyStates.ContainsKey(myNickname) ? playerReadyStates[myNickname] : false;
+		bool newReadyState = !currentReadyState;
+
+		// Update local state
+		playerReadyStates[myNickname] = newReadyState;
+
+		// 🔥 SEND READY STATE VIA RPC TO ALL PLAYERS
+		photonView.RPC("UpdatePlayerReady", RpcTarget.All, myNickname, newReadyState);
+
+		Debug.Log($"🎯 {myNickname} ready state: {newReadyState}");
+
+		// Update ready button text
+		if (readyButton != null)
+		{
+			TMP_Text buttonText = readyButton.GetComponentInChildren<TMP_Text>();
+			if (buttonText != null)
+			{
+				buttonText.text = newReadyState ? "Cancel" : "Ready";
+			}
+		}
+	}
+
+	// 🔥 RPC METHOD - RECEIVE READY UPDATES
+	[PunRPC]
+	void UpdatePlayerReady(string playerName, bool isReady)
+	{
+		Debug.Log($"📡 RPC received: {playerName} ready = {isReady}");
+
+		// Update ready state
+		playerReadyStates[playerName] = isReady;
+
+		// Update UI
+		UpdatePlayerReadyState(playerName, isReady);
+
+		// Update start button
+		UpdateStartButton();
+	}
+
+	void UpdatePlayerReadyState(string playerName, bool isReady)
+	{
+		Debug.Log($"🔄 Updating ready state for {playerName}: {isReady}");
+
+		foreach (GameObject playerItem in playerUIItems)
+		{
+			if (playerItem == null) continue;
+
+			PlayerItem playerScript = playerItem.GetComponent<PlayerItem>();
+			if (playerScript != null)
+			{
+				// 🔥 SỬ DỤNG ORIGINAL NAME THAY VÌ DISPLAYED NAME
+				string storedName = playerScript.originalPlayerName;
+
+				Debug.Log($"   Checking: StoredName='{storedName}', Looking for='{playerName}'");
+
+				if (storedName.Equals(playerName, System.StringComparison.OrdinalIgnoreCase))
+				{
+					Debug.Log($"✅ EXACT MATCH! Setting ready={isReady} for {playerName}");
+					playerScript.SetReady(isReady);
+					return;
+				}
+			}
+		}
+
+		Debug.LogWarning($"⚠️ Player item not found for: {playerName}");
 	}
 
 	// ================= PHOTON CALLBACKS =================
@@ -287,5 +397,51 @@ public class RoomPanelManager : MonoBehaviour
 	public void OnPlayerListChanged()
 	{
 		UpdatePlayerList(GetCurrentPlayerNames(), PhotonNetwork.IsMasterClient);
+	}
+
+	void SetupPlayerListLayout()
+	{
+		if (playerListContent == null) return;
+
+		Debug.Log("🎯 Setting up player list layout...");
+
+		// Ensure Vertical Layout Group
+		VerticalLayoutGroup layoutGroup = playerListContent.GetComponent<VerticalLayoutGroup>();
+		if (layoutGroup == null)
+		{
+			layoutGroup = playerListContent.gameObject.AddComponent<VerticalLayoutGroup>();
+			Debug.Log("✅ Added VerticalLayoutGroup to PlayerListContent");
+		}
+
+		// Configure layout settings
+		layoutGroup.childAlignment = TextAnchor.UpperCenter;     // Top-center alignment
+		layoutGroup.childControlWidth = true;                    // Control child width
+		layoutGroup.childControlHeight = false;                  // Don't control height
+		layoutGroup.childForceExpandWidth = true;               // Force expand width
+		layoutGroup.childForceExpandHeight = false;             // Don't force expand height
+		layoutGroup.spacing = 5f;                               // 5px spacing between players
+
+		// Set padding
+		layoutGroup.padding = new RectOffset(5, 5, 5, 5);      // 5px padding all sides
+
+		// Ensure Content Size Fitter
+		ContentSizeFitter sizeFitter = playerListContent.GetComponent<ContentSizeFitter>();
+		if (sizeFitter == null)
+		{
+			sizeFitter = playerListContent.gameObject.AddComponent<ContentSizeFitter>();
+			Debug.Log("✅ Added ContentSizeFitter to PlayerListContent");
+		}
+
+		// Configure size fitter
+		sizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained; // Don't fit horizontal
+		sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;    // Fit to content height
+
+		Debug.Log("✅ Player list layout configured");
+	}
+
+	// 🔥 IMPLEMENT REQUIRED INTERFACE METHOD
+	public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+	{
+		// Not needed for this implementation
 	}
 }

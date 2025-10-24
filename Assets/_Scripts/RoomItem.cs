@@ -21,123 +21,136 @@ public class RoomItem : MonoBehaviour
 
 		Debug.Log($"🏠 Setting up RoomItem: '{roomName}' ({playerCount}/{maxPlayers})");
 
-		// 🔥 DEBUG VISIBILITY ISSUES
-		Debug.Log($"🔍 === DEBUGGING VISIBILITY ===");
-
-		// Check GameObject active state
-		Debug.Log($"GameObject active: {gameObject.activeInHierarchy}");
-		Debug.Log($"GameObject activeSelf: {gameObject.activeSelf}");
-
-		// Check CanvasGroup
-		CanvasGroup canvasGroup = GetComponent<CanvasGroup>();
-		if (canvasGroup != null)
+		// 🔥 FIX PARENT LAYOUT FIRST
+		RectTransform rectTransform = GetComponent<RectTransform>();
+		if (rectTransform != null)
 		{
-			Debug.Log($"CanvasGroup found - Alpha: {canvasGroup.alpha}, Interactable: {canvasGroup.interactable}");
-			canvasGroup.alpha = 1f; // Force visible
-			canvasGroup.interactable = true;
+			rectTransform.anchorMin = new Vector2(0f, 1f);
+			rectTransform.anchorMax = new Vector2(1f, 1f);
+			rectTransform.pivot = new Vector2(0.5f, 1f);
+			rectTransform.offsetMin = new Vector2(10f, -80f);
+			rectTransform.offsetMax = new Vector2(-10f, 0f);
+			rectTransform.localScale = Vector3.one;
 		}
 
-		// Check background Image alpha
-		Image backgroundImage = GetComponent<Image>();
-		if (backgroundImage != null)
-		{
-			Debug.Log($"Background Image - Alpha: {backgroundImage.color.a}, Color: {backgroundImage.color}");
-			// Force visible background
-			Color bgColor = backgroundImage.color;
-			bgColor.a = 1f;
-			backgroundImage.color = bgColor;
-		}
-		else
-		{
-			Debug.LogWarning("⚠️ No background Image found on RoomItem root");
-		}
-
-		// Update and check text colors
+		// 🔥 FIX CHILD ELEMENTS POSITIONING
+		// Fix RoomNameText
 		if (roomNameText != null)
 		{
 			roomNameText.text = roomName;
-			Debug.Log($"Room name text: '{roomNameText.text}' - Color: {roomNameText.color}, Alpha: {roomNameText.color.a}");
 
-			// Force visible text color
-			Color textColor = roomNameText.color;
-			textColor.a = 1f;
-			if (textColor.r + textColor.g + textColor.b < 0.1f) // If too dark
+			RectTransform nameRect = roomNameText.GetComponent<RectTransform>();
+			if (nameRect != null)
 			{
-				textColor = Color.black;
+				nameRect.anchorMin = new Vector2(0f, 0.5f);     // Left-center
+				nameRect.anchorMax = new Vector2(0.6f, 0.5f);   // 60% width
+				nameRect.pivot = new Vector2(0f, 0.5f);         // Left-center pivot
+				nameRect.anchoredPosition = new Vector2(10f, 0f); // 10px from left
+				nameRect.sizeDelta = new Vector2(0f, 30f);      // Auto width, 30px height
 			}
-			roomNameText.color = textColor;
-		}
-		else
-		{
-			Debug.LogError("❌ roomNameText is NULL!");
+
+			// Force text settings
+			roomNameText.fontSize = 16f;
+			roomNameText.color = Color.black;
+			roomNameText.alignment = TextAlignmentOptions.Left;
+
+			Debug.Log($"✅ Room name set: '{roomNameText.text}'");
 		}
 
+		// Fix PlayersText  
 		if (playersText != null)
 		{
 			playersText.text = $"{playerCount}/{maxPlayers}";
-			Debug.Log($"Players text: '{playersText.text}' - Color: {playersText.color}, Alpha: {playersText.color.a}");
 
-			// Force visible text color
-			Color textColor = playersText.color;
-			textColor.a = 1f;
-			if (textColor.r + textColor.g + textColor.b < 0.1f)
+			RectTransform playersRect = playersText.GetComponent<RectTransform>();
+			if (playersRect != null)
 			{
-				textColor = Color.black;
+				playersRect.anchorMin = new Vector2(0.6f, 0.5f);   // Right side
+				playersRect.anchorMax = new Vector2(0.8f, 0.5f);   // 20% width
+				playersRect.pivot = new Vector2(0.5f, 0.5f);       // Center pivot
+				playersRect.anchoredPosition = new Vector2(0f, 0f);
+				playersRect.sizeDelta = new Vector2(0f, 30f);
 			}
-			playersText.color = textColor;
-		}
-		else
-		{
-			Debug.LogError("❌ playersText is NULL!");
+
+			playersText.fontSize = 14f;
+			playersText.color = Color.blue;
+			playersText.alignment = TextAlignmentOptions.Center;
+
+			Debug.Log($"✅ Players text set: '{playersText.text}'");
 		}
 
-		// Check button
+		// Fix Join Button
 		if (joinButton != null)
 		{
 			joinButton.onClick.RemoveAllListeners();
 			joinButton.onClick.AddListener(OnJoinClicked);
 
-			// Check button image
+			RectTransform buttonRect = joinButton.GetComponent<RectTransform>();
+			if (buttonRect != null)
+			{
+				buttonRect.anchorMin = new Vector2(0.8f, 0.2f);    // Right side, bottom 20%
+				buttonRect.anchorMax = new Vector2(0.95f, 0.8f);   // 15% width, 60% height
+				buttonRect.pivot = new Vector2(0.5f, 0.5f);        // Center pivot
+				buttonRect.anchoredPosition = new Vector2(0f, 0f);
+				buttonRect.sizeDelta = new Vector2(0f, 0f);        // Use anchors for size
+			}
+
+			// Make sure button is visible
 			Image buttonImage = joinButton.GetComponent<Image>();
 			if (buttonImage != null)
 			{
-				Debug.Log($"Button Image - Alpha: {buttonImage.color.a}, Color: {buttonImage.color}");
-				Color btnColor = buttonImage.color;
-				btnColor.a = 1f;
-				buttonImage.color = btnColor;
+				buttonImage.color = new Color(0.2f, 0.6f, 1f, 1f); // Blue button
 			}
 
-			// Check button text
 			TMP_Text buttonText = joinButton.GetComponentInChildren<TMP_Text>();
 			if (buttonText != null)
 			{
-				Debug.Log($"Button Text: '{buttonText.text}' - Color: {buttonText.color}");
-				Color btnTextColor = buttonText.color;
-				btnTextColor.a = 1f;
-				if (btnTextColor.r + btnTextColor.g + btnTextColor.b < 0.1f)
-				{
-					btnTextColor = Color.white;
-				}
-				buttonText.color = btnTextColor;
+				buttonText.text = "Join";
+				buttonText.color = Color.white;
+				buttonText.fontSize = 12f;
 			}
+
+			Debug.Log($"✅ Join button setup complete");
 		}
 
-		// Check RectTransform size
-		RectTransform rectTransform = GetComponent<RectTransform>();
-		if (rectTransform != null)
+		// Fix Private Icon
+		if (privateIcon != null)
 		{
-			Debug.Log($"RectTransform - Size: {rectTransform.sizeDelta}, Scale: {rectTransform.localScale}");
+			privateIcon.gameObject.SetActive(isPrivate);
 
-			// Force proper size if too small
-			if (rectTransform.sizeDelta.y < 10)
+			if (isPrivate)
 			{
-				Debug.LogWarning("⚠️ RoomItem height too small, forcing to 80px");
-				rectTransform.sizeDelta = new Vector2(rectTransform.sizeDelta.x, 80);
+				RectTransform iconRect = privateIcon.GetComponent<RectTransform>();
+				if (iconRect != null)
+				{
+					iconRect.anchorMin = new Vector2(0.5f, 0.5f);
+					iconRect.anchorMax = new Vector2(0.6f, 0.5f);
+					iconRect.pivot = new Vector2(0.5f, 0.5f);
+					iconRect.anchoredPosition = new Vector2(0f, 0f);
+					iconRect.sizeDelta = new Vector2(20f, 20f);    // 20x20px icon
+				}
 			}
 
-			// Force proper scale
-			rectTransform.localScale = Vector3.one;
+			Debug.Log($"✅ Private icon: {(isPrivate ? "shown" : "hidden")}");
 		}
+
+		// 🔥 DISABLE LAYOUT GROUP ON ROOT (if exists) to prevent overriding
+		LayoutGroup rootLayout = GetComponent<LayoutGroup>();
+		if (rootLayout != null)
+		{
+			Debug.LogWarning("⚠️ Found LayoutGroup on RoomItem root - this may interfere with positioning!");
+			// Optionally disable: rootLayout.enabled = false;
+		}
+
+		// Force all children to be active
+		for (int i = 0; i < transform.childCount; i++)
+		{
+			Transform child = transform.GetChild(i);
+			child.gameObject.SetActive(true);
+		}
+
+		// Force canvas update
+		Canvas.ForceUpdateCanvases();
 
 		Debug.Log($"🎉 RoomItem setup complete for: {roomName}");
 	}

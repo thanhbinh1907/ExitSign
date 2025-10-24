@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
+using System.Collections.Generic;
+using System.Linq;
 using TMPro;
+using UnityEngine;
 using UnityEngine.UI;
-using ExitGames.Client.Photon;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -76,6 +77,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 		// Load tên đã lưu
 		LoadPlayerName();
+
+		// Thiết lập layout cho room list
+		SetupRoomListLayout();
 	}
 
 	void SetupUIListeners()
@@ -451,6 +455,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 	void RefreshRoomListUI()
 	{
+		Debug.Log($"🔥 RefreshRoomListUI called - Cached rooms: {cachedRoomList.Count}");
+
 		ClearRoomListUI();
 
 		if (cachedRoomList.Count == 0)
@@ -461,12 +467,20 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 		if (noRoomsText != null) noRoomsText.gameObject.SetActive(false);
 
-		foreach (var kv in cachedRoomList)
-		{
-			RoomInfo info = kv.Value;
-			GameObject g = Instantiate(roomItemPrefab, roomListContent);
-			RoomItem item = g.GetComponent<RoomItem>();
+		// Sort rooms by creation time (if available) or by name
+		var sortedRooms = cachedRoomList.Values.OrderBy(room => room.Name).ToList();
 
+		foreach (RoomInfo info in sortedRooms)
+		{
+			Debug.Log($"🏗️ Creating room item for: {info.Name}");
+
+			GameObject g = Instantiate(roomItemPrefab, roomListContent);
+			g.SetActive(true);
+
+			// 🔥 PHÒNG MỚI Ở DƯỚI - SetAsLastSibling
+			g.transform.SetAsLastSibling();
+
+			RoomItem item = g.GetComponent<RoomItem>();
 			if (item != null)
 			{
 				bool isPrivate = info.CustomProperties != null &&
@@ -474,6 +488,28 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 							   (bool)info.CustomProperties["isPrivate"];
 
 				item.Setup(info.Name, info.PlayerCount, info.MaxPlayers, isPrivate, this, info);
+			}
+		}
+
+		// Force layout rebuild after all items created
+		StartCoroutine(RefreshLayoutNextFrame());
+	}
+
+	System.Collections.IEnumerator RefreshLayoutNextFrame()
+	{
+		yield return null; // Wait 1 frame
+
+		if (roomListContent != null)
+		{
+			RectTransform rectTransform = roomListContent as RectTransform;
+			if (rectTransform != null)
+			{
+				LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
+				Debug.Log("✅ Layout refreshed - room items should be properly positioned");
+			}
+			else
+			{
+				Debug.LogWarning("roomListContent is not a RectTransform!");
 			}
 		}
 	}
@@ -494,4 +530,43 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 	{
 		PhotonNetwork.LoadLevel("Gameplay"); // Tên scene gameplay của bạn
 	}
+
+	void SetupRoomListLayout()
+	{
+		if (roomListContent == null) return;
+
+		// Đảm bảo có Vertical Layout Group
+		VerticalLayoutGroup layoutGroup = roomListContent.GetComponent<VerticalLayoutGroup>();
+		if (layoutGroup == null)
+		{
+			layoutGroup = roomListContent.gameObject.AddComponent<VerticalLayoutGroup>();
+			Debug.Log("✅ Added VerticalLayoutGroup to RoomListContent");
+		}
+
+		// Configure layout settings
+		layoutGroup.childAlignment = TextAnchor.UpperCenter;     // Align to top-center
+		layoutGroup.childControlWidth = true;                    // Control child width
+		layoutGroup.childControlHeight = false;                  // Don't control height
+		layoutGroup.childForceExpandWidth = true;               // Force expand width
+		layoutGroup.childForceExpandHeight = false;             // Don't force expand height
+		layoutGroup.spacing = 10f;                              // 10px spacing between items
+
+		// Set padding
+		layoutGroup.padding = new RectOffset(10, 10, 10, 10);   // 10px padding all sides
+
+		// Đảm bảo có Content Size Fitter
+		ContentSizeFitter sizeFitter = roomListContent.GetComponent<ContentSizeFitter>();
+		if (sizeFitter == null)
+		{
+			sizeFitter = roomListContent.gameObject.AddComponent<ContentSizeFitter>();
+			Debug.Log("✅ Added ContentSizeFitter to RoomListContent");
+		}
+
+		// Configure size fitter
+		sizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained; // Don't fit horizontal
+		sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;    // Fit to content height
+
+		Debug.Log("🎯 RoomListContent layout configured");
+	}
+
 }
