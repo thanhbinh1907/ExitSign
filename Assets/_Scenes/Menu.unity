@@ -2347,7 +2347,7 @@ MonoBehaviour:
   statusText: {fileID: 867828435}
   playerNameInput: {fileID: 204426139}
   lobbyPanel: {fileID: 424600593}
-  roomListContent: {fileID: 142434097}
+  roomListContent: {fileID: 714841171}
   roomItemPrefab: {fileID: 9002064316745478516, guid: 5a738347ba0cf39468d784fe70081b88, type: 3}
   noRoomsText: {fileID: 769769752}
   createRoomPanel: {fileID: 175706593}
