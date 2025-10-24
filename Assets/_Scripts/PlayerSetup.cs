@@ -42,7 +42,7 @@ public class PlayerSetup : MonoBehaviourPun
 		{
 			// Nếu là nhân vật CỦA NGƯỜI KHÁC:
 			// Tắt camera đi
-			if (playerCamera != null)
+			if (playerCamera != null)	
 			{
 				playerCamera.gameObject.SetActive(false);
 			}
