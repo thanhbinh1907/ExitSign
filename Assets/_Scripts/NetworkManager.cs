@@ -20,6 +20,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 	public Transform roomListContent;
 	public GameObject roomItemPrefab;
 	public TMP_Text noRoomsText;
+	public Button createRoomButtonInLobby;
 
 	[Header("Create Room UI")]
 	public GameObject createRoomPanel;         // Panel chứa UI tạo phòng
@@ -65,6 +66,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		}
 
 		Debug.Log("✅ Only 1 NetworkManager found - OK");
+
+		SetCreateRoomButtonState(false);
 
 		PhotonNetwork.AutomaticallySyncScene = true;
 
@@ -135,14 +138,22 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 	public void ShowCreateRoomPanel()
 	{
+		// 🔥 CHECK CONNECTION TRƯỚC KHI HIỆN PANEL
+		if (!PhotonNetwork.InLobby)
+		{
+			Debug.LogWarning("❌ Not in lobby - cannot show create room panel!");
+			if (statusText != null) statusText.text = "Chưa kết nối vào lobby!";
+			return;
+		}
+
 		// Gọi từ button "Create Room" trong lobby
 		createRoomPanel.SetActive(true);
 
 		// Reset form
-		createRoomNameInput.text = "";
-		createPrivateToggle.isOn = false;
-		createPasswordInput.text = "";
-		passwordContainer.SetActive(false);
+		if (createRoomNameInput != null) createRoomNameInput.text = "";
+		if (createPrivateToggle != null) createPrivateToggle.isOn = false;
+		if (createPasswordInput != null) createPasswordInput.text = "";
+		if (passwordContainer != null) passwordContainer.SetActive(false);
 	}
 
 	// ================= PHOTON CALLBACKS =================
@@ -150,18 +161,34 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 	public override void OnConnectedToMaster()
 	{
 		if (statusText != null) statusText.text = "Đã kết nối. Đang vào Lobby...";
+
+		SetCreateRoomButtonState(false);
+
 		PhotonNetwork.JoinLobby();
 	}
 
 	public override void OnJoinedLobby()
 	{
 		if (statusText != null) statusText.text = "Đã vào Lobby";
+
+		SetCreateRoomButtonState(true);
 		ClearRoomListUI();
 	}
 
 	public override void OnDisconnected(DisconnectCause cause)
 	{
 		if (statusText != null) statusText.text = "Mất kết nối: " + cause.ToString();
+		SetCreateRoomButtonState(false);
+	}
+
+	public override void OnLeftLobby()
+	{
+		Debug.Log("🚪 Left lobby");
+
+		// 🔥 DISABLE CREATE ROOM BUTTON KHI RỜI LOBBY
+		SetCreateRoomButtonState(false);
+
+		if (statusText != null) statusText.text = "Đã rời Lobby";
 	}
 
 	public override void OnRoomListUpdate(List<RoomInfo> roomList)
@@ -326,6 +353,12 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 	public void OnClick_CreateRoom()
 	{
+		if (!PhotonNetwork.InLobby)
+		{
+			Debug.LogWarning("❌ Not in lobby - cannot create room!");
+			if (statusText != null) statusText.text = "Chưa kết nối vào lobby!";
+			return;
+		}
 		// CHẶN MULTIPLE CALLS
 		if (isCreatingRoom || isProcessingRoomOperation)
 		{
@@ -622,6 +655,49 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;    // Fit to content height
 
 		Debug.Log("🎯 RoomListContent layout configured");
+	}
+
+	void SetCreateRoomButtonState(bool enabled)
+	{
+		if (createRoomButtonInLobby != null)
+		{
+			createRoomButtonInLobby.interactable = enabled;
+
+			// 🔥 THAY ĐỔI VISUAL APPEARANCE
+			Image buttonImage = createRoomButtonInLobby.GetComponent<Image>();
+			TMP_Text buttonText = createRoomButtonInLobby.GetComponentInChildren<TMP_Text>();
+
+			if (enabled)
+			{
+				// Enabled state: normal colors
+				if (buttonImage != null)
+				{
+					buttonImage.color = new Color(1f, 1f, 1f, 1f); // White/normal
+				}
+				if (buttonText != null)
+				{
+					buttonText.color = new Color(0.2f, 0.2f, 0.2f, 1f); // Dark text
+					buttonText.text = "Create Room";
+				}
+
+				Debug.Log("✅ Create Room button ENABLED");
+			}
+			else
+			{
+				// Disabled state: grayed out
+				if (buttonImage != null)
+				{
+					buttonImage.color = new Color(0.6f, 0.6f, 0.6f, 0.7f); // Gray + transparent
+				}
+				if (buttonText != null)
+				{
+					buttonText.color = new Color(0.5f, 0.5f, 0.5f, 0.7f); // Light gray text
+					buttonText.text = "Connecting...";
+				}
+
+				Debug.Log("❌ Create Room button DISABLED");
+			}
+		}
 	}
 
 }
