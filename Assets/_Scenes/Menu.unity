@@ -560,7 +560,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.000019073486}
+  m_AnchoredPosition: {x: 0, y: 0.00013458986}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &155270500
@@ -2350,6 +2350,7 @@ MonoBehaviour:
   roomListContent: {fileID: 142434097}
   roomItemPrefab: {fileID: 668077857964935855, guid: 93e104e1df4a77f4bb1b3a828597b240, type: 3}
   noRoomsText: {fileID: 769769752}
+  createRoomButtonInLobby: {fileID: 628556457}
   createRoomPanel: {fileID: 175706593}
   createRoomNameInput: {fileID: 1889564887}
   createPrivateToggle: {fileID: 1845757617}
