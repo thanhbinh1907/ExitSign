@@ -81,6 +81,9 @@ public class RoomPanelManager : MonoBehaviourPun
 		this.currentRoomName = roomName;
 		this.maxPlayers = maxPlayers;
 
+		// 🔥 ENABLE ROOM UI FIRST (Fix for kick recovery)
+		EnableRoomUI();
+
 		// Cập nhật UI
 		if (roomTitleText != null)
 		{
@@ -90,7 +93,67 @@ public class RoomPanelManager : MonoBehaviourPun
 		UpdateRoomStatus();
 		UpdatePlayerList(GetCurrentPlayerNames(), PhotonNetwork.IsMasterClient);
 
-		Debug.Log("✅ Room setup complete");
+		Debug.Log("✅ Room setup complete with UI enabled");
+	}
+
+	// 🔥 NEW: ENABLE ROOM UI METHOD (Fix for kicked player UI)
+	void EnableRoomUI()
+	{
+		Debug.Log("🔓 Enabling room UI for active player");
+
+		// Always enable basic buttons
+		if (leaveButton != null)
+		{
+			leaveButton.interactable = true;
+			leaveButton.enabled = true;
+			Debug.Log("   Leave button enabled");
+		}
+
+		if (readyButton != null)
+		{
+			readyButton.interactable = true;
+			readyButton.enabled = true;
+			Debug.Log("   Ready button enabled");
+		}
+
+		// Start button visibility/interactability is handled by UpdateStartButton()
+		if (startButton != null)
+		{
+			startButton.enabled = true;
+			Debug.Log("   Start button component enabled (interactability handled by UpdateStartButton)");
+		}
+
+		// Re-enable all kick buttons for master client
+		if (PhotonNetwork.IsMasterClient)
+		{
+			EnableAllKickButtons();
+		}
+
+		Debug.Log("✅ Room UI enabled successfully");
+	}
+
+	// 🔥 NEW: ENABLE ALL KICK BUTTONS FOR MASTER CLIENT
+	void EnableAllKickButtons()
+	{
+		Debug.Log("🦵 Enabling all kick buttons for master client");
+
+		foreach (var playerItem in playerUIItems)
+		{
+			if (playerItem != null)
+			{
+				PlayerItem script = playerItem.GetComponent<PlayerItem>();
+				if (script != null && script.kickButton != null)
+				{
+					// Only enable if it should be visible
+					if (script.kickButton.gameObject.activeSelf)
+					{
+						script.kickButton.interactable = true;
+						script.kickButton.enabled = true;
+						Debug.Log($"   Enabled kick button for: {script.originalPlayerName}");
+					}
+				}
+			}
+		}
 	}
 
 	public void UpdatePlayerList(List<string> playerNames, bool isMaster)
@@ -339,6 +402,9 @@ public class RoomPanelManager : MonoBehaviourPun
 	{
 		Debug.Log($"👑 Updating master client UI: isMaster={isMaster}");
 
+		// 🔥 ENSURE UI IS ENABLED WHEN UPDATING MASTER CLIENT STATUS
+		EnableRoomUI();
+
 		// Hiện/ẩn indicator chủ phòng
 		if (masterClientIndicator != null)
 		{
@@ -366,6 +432,13 @@ public class RoomPanelManager : MonoBehaviourPun
 
 		bool isMaster = PhotonNetwork.IsMasterClient;
 		bool hasEnoughPlayers = PhotonNetwork.CurrentRoom.PlayerCount >= 2;
+
+		// 🔥 ENSURE START BUTTON IS ENABLED FOR INTERACTION CHECKS
+		if (!startButton.enabled)
+		{
+			startButton.enabled = true;
+			Debug.Log("🔓 Force-enabled startButton component");
+		}
 
 		// Check if all non-master players are ready
 		bool allPlayersReady = true;
@@ -401,7 +474,7 @@ public class RoomPanelManager : MonoBehaviourPun
 		// Show start button only for master
 		startButton.gameObject.SetActive(isMaster);
 
-		// Enable only if conditions met
+		// 🔥 FORCE ENABLE INTERACTABILITY BASED ON CONDITIONS
 		bool canStart = isMaster && hasEnoughPlayers && allPlayersReady;
 		startButton.interactable = canStart;
 
@@ -423,7 +496,7 @@ public class RoomPanelManager : MonoBehaviourPun
 			}
 		}
 
-		Debug.Log($"🎮 Start button - CanStart: {canStart}, Ready: {readyCount}/{totalPlayers - 1}");
+		Debug.Log($"🎮 Start button - Visible: {isMaster}, CanStart: {canStart}, Ready: {readyCount}/{totalPlayers - 1}");
 	}
 
 	void UpdateRoomStatus()
@@ -856,8 +929,8 @@ public class RoomPanelManager : MonoBehaviourPun
 			statusText.color = Color.red;
 		}
 
-		// Disable UI to prevent further actions
-		DisableRoomUI();
+		// 🔥 DISABLE UI ONLY FOR KICKED PLAYER (not master doing the kicking)
+		DisableRoomUIForKickedPlayer();
 
 		// Short delay to show message, then leave immediately
 		yield return new WaitForSeconds(0.5f);
@@ -899,16 +972,17 @@ public class RoomPanelManager : MonoBehaviourPun
 		}
 	}
 
-	// Disable room UI during kick
-	void DisableRoomUI()
+	// 🔥 ENHANCED: Disable room UI only for kicked player (not affecting master)
+	void DisableRoomUIForKickedPlayer()
 	{
 		Debug.Log("🔒 Disabling room UI for kicked player");
 
+		// Only disable if we're being kicked (not if we're the master doing the kicking)
 		if (startButton != null) startButton.interactable = false;
 		if (leaveButton != null) leaveButton.interactable = false;
 		if (readyButton != null) readyButton.interactable = false;
 
-		// Disable all player interaction
+		// Disable all kick buttons
 		foreach (var playerItem in playerUIItems)
 		{
 			if (playerItem != null)
@@ -1192,6 +1266,41 @@ public class RoomPanelManager : MonoBehaviourPun
 	{
 		Debug.Log("🧪 Testing force leave...");
 		StartCoroutine(ForceLeaveRoom("Test force leave"));
+	}
+
+	// 🔥 NEW: DEBUG UI BUTTON STATES
+	[ContextMenu("Debug UI Button States")]
+	public void DebugUIButtonStates()
+	{
+		Debug.Log("🔍 === DEBUGGING UI BUTTON STATES ===");
+
+		if (startButton != null)
+		{
+			Debug.Log($"Start Button - Active: {startButton.gameObject.activeSelf}, Interactable: {startButton.interactable}, Enabled: {startButton.enabled}");
+		}
+
+		if (readyButton != null)
+		{
+			Debug.Log($"Ready Button - Active: {readyButton.gameObject.activeSelf}, Interactable: {readyButton.interactable}, Enabled: {readyButton.enabled}");
+		}
+
+		if (leaveButton != null)
+		{
+			Debug.Log($"Leave Button - Active: {leaveButton.gameObject.activeSelf}, Interactable: {leaveButton.interactable}, Enabled: {leaveButton.enabled}");
+		}
+
+		Debug.Log($"Is Master Client: {PhotonNetwork.IsMasterClient}");
+		Debug.Log($"Room Player Count: {PhotonNetwork.CurrentRoom?.PlayerCount ?? 0}");
+
+		Debug.Log("🔍 === END DEBUG UI BUTTON STATES ===");
+	}
+
+	[ContextMenu("Force Enable All UI")]
+	public void ForceEnableAllUITest()
+	{
+		Debug.Log("🔓 FORCE TEST: Enabling all UI buttons");
+		EnableRoomUI();
+		UpdateStartButton();
 	}
 
 	// Required for PUN

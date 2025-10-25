@@ -320,7 +320,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 			bool requestSent = false;
 			System.Exception caughtException = null;
 
-			// 🔥 TRY-CATCH WITHOUT YIELD
+			// Try-catch without yield
 			try
 			{
 				PhotonNetwork.JoinLobby();
@@ -333,7 +333,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 				requestSent = false;
 			}
 
-			// 🔥 YIELD OUTSIDE OF TRY-CATCH
+			// Yield outside of try-catch
 			if (requestSent)
 			{
 				// Wait for result with timeout
@@ -1095,8 +1095,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		// Switch to room panel
 		SwitchToRoomPanel();
 
-		// Setup room UI
-		SetupRoomUI(room);
+		// Setup room UI with enhanced recovery
+		SetupRoomUIWithRecovery(room);
 
 		Debug.Log("🎉 Room join completed successfully!");
 	}
@@ -1107,11 +1107,18 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		if (roomPanel != null) roomPanel.SetActive(true);
 	}
 
-	void SetupRoomUI(Room room)
+	// 🔥 ENHANCED: Setup room UI with recovery for kicked players
+	void SetupRoomUIWithRecovery(Room room)
 	{
 		if (roomPanelManager != null)
 		{
+			Debug.Log("🔓 Setting up room with UI recovery enabled");
+
+			// Setup room with enhanced recovery
 			roomPanelManager.SetupRoom(room.Name, room.MaxPlayers);
+
+			// Ensure UI is properly enabled after potential kick recovery
+			Debug.Log("🔓 Ensuring room UI is fully enabled after setup");
 		}
 
 		UpdatePlayerListInRoomPanel();
@@ -1180,11 +1187,11 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		HandleRoomOperationFailure();
 		ClearJoinAttemptData();
 
-		// 🔥 FIX: ENSURE WE'RE BACK IN LOBBY AFTER JOIN FAILURE
+		// Ensure we're back in lobby after join failure
 		StartCoroutine(EnsureInLobbyAfterJoinFailure());
 	}
 
-	// 🔥 NEW: ENSURE WE'RE BACK IN LOBBY AFTER JOIN FAILURE
+	// Ensure we're back in lobby after join failure
 	IEnumerator EnsureInLobbyAfterJoinFailure()
 	{
 		// Wait for network state to stabilize
