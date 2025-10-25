@@ -6,9 +6,8 @@ public class PlayerItem : MonoBehaviour
 {
 	[Header("UI Elements")]
 	public TMP_Text nameText;
-	public Image masterClientIcon;
+	// 🔥 REMOVED: public Image masterClientIcon; - KHÔNG DÙNG MASTER ICON NỮA
 	public Image readyIcon;
-	// 🔥 REMOVED: public Image backgroundImage; - KHÔNG DÙNG BACKGROUND NỮA
 
 	[Header("Colors")]
 	public Color readyColor = Color.green;
@@ -21,23 +20,14 @@ public class PlayerItem : MonoBehaviour
 
 	void Start()
 	{
-		// 🔥 REMOVED: SetupBackground() - KHÔNG SETUP BACKGROUND NỮA
-
-		// Hide icons by default
-		if (masterClientIcon != null)
-		{
-			masterClientIcon.gameObject.SetActive(false);
-		}
-
+		// Hide ready icon by default
 		if (readyIcon != null)
 		{
 			readyIcon.gameObject.SetActive(false);
 		}
 
-		Debug.Log("🎮 PlayerItem initialized - icons hidden, no background");
+		Debug.Log("🎮 PlayerItem initialized - ready icon hidden, no background, no master icon");
 	}
-
-	// 🔥 REMOVED: SetupBackground() method - KHÔNG CẦN NỮA
 
 	public void SetName(string playerName)
 	{
@@ -46,7 +36,7 @@ public class PlayerItem : MonoBehaviour
 		// 🔥 LUU TÊN GỐC
 		originalPlayerName = playerName;
 
-		// 🔥 FIX PARENT LAYOUT (same as RoomItem)
+		// 🔥 FIX PARENT LAYOUT
 		RectTransform rectTransform = GetComponent<RectTransform>();
 		if (rectTransform != null)
 		{
@@ -58,7 +48,7 @@ public class PlayerItem : MonoBehaviour
 			rectTransform.localScale = Vector3.one;
 		}
 
-		// 🔥 FIX NAME TEXT (same style as RoomItem)
+		// 🔥 FIX NAME TEXT - NOW HAS MORE SPACE (up to 85% width)
 		if (nameText != null)
 		{
 			nameText.text = playerName;
@@ -67,13 +57,13 @@ public class PlayerItem : MonoBehaviour
 			if (nameRect != null)
 			{
 				nameRect.anchorMin = new Vector2(0f, 0f);       // Left side
-				nameRect.anchorMax = new Vector2(0.7f, 1f);     // 70% width
+				nameRect.anchorMax = new Vector2(0.85f, 1f);    // 85% width (more space since no master icon)
 				nameRect.pivot = new Vector2(0f, 0.5f);         // Left-center pivot
 				nameRect.anchoredPosition = new Vector2(10f, 0f); // 10px from left
 				nameRect.sizeDelta = new Vector2(0f, 0f);       // Use anchors for size
 			}
 
-			// 🔥 FORCE TEXT STYLE (same as RoomItem)
+			// 🔥 FORCE TEXT STYLE
 			nameText.fontSize = 16f;
 			nameText.color = Color.black;
 			nameText.alignment = TextAlignmentOptions.Left;
@@ -103,56 +93,7 @@ public class PlayerItem : MonoBehaviour
 		this.isMasterClient = isMaster;
 		Debug.Log($"👑 SetAsMasterClient: {isMaster} for player: {originalPlayerName}");
 
-		// 🔥 REMOVED: Background color updates - KHÔNG DÙNG BACKGROUND
-
-		// 🔥 SHOW/HIDE MASTER CLIENT ICON - FIX LOGIC
-		if (masterClientIcon != null)
-		{
-			Debug.Log($"🔍 Master icon GameObject before: Active={masterClientIcon.gameObject.activeInHierarchy}, SelfActive={masterClientIcon.gameObject.activeSelf}");
-
-			masterClientIcon.gameObject.SetActive(isMaster);
-
-			Debug.Log($"🔍 Master icon GameObject after: Active={masterClientIcon.gameObject.activeInHierarchy}, SelfActive={masterClientIcon.gameObject.activeSelf}");
-
-			if (isMaster)
-			{
-				// 🔥 FORCE ICON VISIBLE AND POSITION
-				masterClientIcon.gameObject.SetActive(true); // Double-check active
-
-				// Position master client icon (right side)
-				RectTransform iconRect = masterClientIcon.GetComponent<RectTransform>();
-				if (iconRect != null)
-				{
-					iconRect.anchorMin = new Vector2(0.7f, 0.2f);   // Right side
-					iconRect.anchorMax = new Vector2(0.85f, 0.8f);  // 15% width
-					iconRect.pivot = new Vector2(0.5f, 0.5f);       // Center pivot
-					iconRect.anchoredPosition = new Vector2(0f, 0f);
-					iconRect.sizeDelta = new Vector2(0f, 0f);       // Use anchors
-
-					Debug.Log($"📐 Master icon positioned: {iconRect.anchoredPosition}, size: {iconRect.sizeDelta}");
-				}
-
-				// 🔥 FORCE ICON COLOR AND PROPERTIES
-				masterClientIcon.color = Color.red; // Red crown icon
-				masterClientIcon.raycastTarget = false; // Don't block clicks
-
-				// 🔥 MAKE SURE ICON IS REALLY VISIBLE
-				masterClientIcon.enabled = true;
-
-				Debug.Log($"👑 Master client icon FORCED VISIBLE for: {originalPlayerName}");
-				Debug.Log($"    Color: {masterClientIcon.color}, Enabled: {masterClientIcon.enabled}");
-			}
-			else
-			{
-				Debug.Log($"👤 Master client icon HIDDEN for: {originalPlayerName}");
-			}
-		}
-		else
-		{
-			Debug.LogError($"❌ masterClientIcon is NULL for player: {originalPlayerName}");
-		}
-
-		// 🔥 UPDATE NAME TEXT FOR MASTER
+		// 🔥 NO MASTER ICON - ONLY UPDATE NAME TEXT
 		if (nameText != null)
 		{
 			if (isMaster)
@@ -174,14 +115,8 @@ public class PlayerItem : MonoBehaviour
 			Debug.Log($"🏷️ Name text updated to: '{nameText.text}' (original: '{originalPlayerName}')");
 		}
 
-		// 🔥 FORCE CANVAS UPDATE TO REFRESH VISUALS
+		// Force canvas update
 		Canvas.ForceUpdateCanvases();
-
-		// 🔥 DEBUG FINAL STATE
-		if (masterClientIcon != null)
-		{
-			Debug.Log($"🔍 FINAL Master icon state: Active={masterClientIcon.gameObject.activeInHierarchy}, Color={masterClientIcon.color}, Enabled={masterClientIcon.enabled}");
-		}
 	}
 
 	public void SetReady(bool ready)
@@ -189,27 +124,36 @@ public class PlayerItem : MonoBehaviour
 		this.isReady = ready;
 		Debug.Log($"✅ SetReady: {ready} for player: {originalPlayerName}");
 
-		// 🔥 SHOW/HIDE READY ICON
+		// 🔥 SHOW/HIDE READY ICON - NOW AT FAR RIGHT (90% position)
 		if (readyIcon != null)
 		{
 			readyIcon.gameObject.SetActive(ready);
 
 			if (ready)
 			{
-				// Position ready icon (far right)
+				// 🔥 READY ICON NOW HAS MORE SPACE - POSITION AT 90%
 				RectTransform readyRect = readyIcon.GetComponent<RectTransform>();
 				if (readyRect != null)
 				{
-					readyRect.anchorMin = new Vector2(0.85f, 0.2f);  // Far right
-					readyRect.anchorMax = new Vector2(0.95f, 0.8f);  // 10% width
-					readyRect.pivot = new Vector2(0.5f, 0.5f);
-					readyRect.anchoredPosition = new Vector2(0f, 0f);
-					readyRect.sizeDelta = new Vector2(0f, 0f);
+					readyRect.anchorMin = new Vector2(0.9f, 0.5f);     // Single point at 90% width, center height
+					readyRect.anchorMax = new Vector2(0.9f, 0.5f);     // Same point - no stretch!
+					readyRect.pivot = new Vector2(0.5f, 0.5f);         // Center pivot
+					readyRect.anchoredPosition = new Vector2(0f, 0f);  // No offset from anchor
+					readyRect.sizeDelta = new Vector2(24f, 24f);       // Slightly bigger: 24x24px
+
+					Debug.Log($"✅ Ready icon positioned: Size={readyRect.sizeDelta}, Anchor={readyRect.anchorMin}");
 				}
 
+				// 🔥 FORCE ICON PROPERTIES
 				readyIcon.color = readyColor; // Green checkmark
 				readyIcon.enabled = true;
 				readyIcon.raycastTarget = false;
+
+				// 🔥 ENSURE ICON ASPECT RATIO
+				if (readyIcon.sprite != null)
+				{
+					readyIcon.preserveAspect = true; // Keep original aspect ratio
+				}
 
 				Debug.Log($"✅ Ready icon SHOWN for: {originalPlayerName}");
 			}
@@ -218,28 +162,19 @@ public class PlayerItem : MonoBehaviour
 				Debug.Log($"❌ Ready icon HIDDEN for: {originalPlayerName}");
 			}
 		}
-
-		// 🔥 REMOVED: Background color changes - KHÔNG DÙNG BACKGROUND
 	}
 
-	// 🔥 RESET ICONS METHOD
+	// 🔥 RESET ICONS METHOD - SIMPLIFIED
 	public void ResetIcons()
 	{
 		Debug.Log($"🔄 Resetting icons for: {originalPlayerName}");
 
-		if (masterClientIcon != null)
-		{
-			masterClientIcon.gameObject.SetActive(false);
-			Debug.Log($"   Master icon reset to inactive");
-		}
-
+		// 🔥 ONLY RESET READY ICON (no master icon anymore)
 		if (readyIcon != null)
 		{
 			readyIcon.gameObject.SetActive(false);
 			Debug.Log($"   Ready icon reset to inactive");
 		}
-
-		// 🔥 REMOVED: Background reset - KHÔNG DÙNG BACKGROUND
 
 		// Reset text style
 		if (nameText != null)
@@ -251,6 +186,6 @@ public class PlayerItem : MonoBehaviour
 		isReady = false;
 		isMasterClient = false;
 
-		Debug.Log($"🔄 Icons and styling reset completed for: {originalPlayerName}");
+		Debug.Log($"🔄 Icons reset completed for: {originalPlayerName}");
 	}
 }

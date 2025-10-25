@@ -123,12 +123,25 @@ public class RoomItem : MonoBehaviour
 				RectTransform iconRect = privateIcon.GetComponent<RectTransform>();
 				if (iconRect != null)
 				{
-					iconRect.anchorMin = new Vector2(0.5f, 0.5f);
-					iconRect.anchorMax = new Vector2(0.6f, 0.5f);
-					iconRect.pivot = new Vector2(0.5f, 0.5f);
-					iconRect.anchoredPosition = new Vector2(0f, 0f);
-					iconRect.sizeDelta = new Vector2(20f, 20f);    // 20x20px icon
+					// 🔥 FIX: SỬ DỤNG ANCHOR POINT THAY VÌ STRETCH
+					iconRect.anchorMin = new Vector2(0.55f, 0.5f);     // Center point at 55%
+					iconRect.anchorMax = new Vector2(0.55f, 0.5f);     // Same point - no stretch!
+					iconRect.pivot = new Vector2(0.5f, 0.5f);          // Center pivot
+					iconRect.anchoredPosition = new Vector2(0f, 0f);   // No offset from anchor
+					iconRect.sizeDelta = new Vector2(24f, 24f);        // Fixed size: 24x24px
+
+					Debug.Log($"🔒 Private icon positioned: Size={iconRect.sizeDelta}, Anchor={iconRect.anchorMin}");
 				}
+
+				// 🔥 ENSURE ICON ASPECT RATIO
+				if (privateIcon.sprite != null)
+				{
+					privateIcon.preserveAspect = true; // Keep original aspect ratio
+				}
+
+				// Set icon color/properties
+				privateIcon.color = Color.red; // Red lock icon
+				privateIcon.raycastTarget = false; // Don't block clicks
 			}
 
 			Debug.Log($"✅ Private icon: {(isPrivate ? "shown" : "hidden")}");
