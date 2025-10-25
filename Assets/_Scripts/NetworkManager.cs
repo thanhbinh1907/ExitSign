@@ -54,7 +54,11 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 	private bool isCreatingRoom = false;
 	private bool isProcessingRoomOperation = false;
 
-	// Status management
+	// Network state monitoring
+	private ClientState previousNetworkState = ClientState.Disconnected;
+	private Coroutine lobbyMonitorCoroutine;
+
+	// Status management system
 	private enum UIStatus
 	{
 		Connecting,
@@ -78,8 +82,52 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		// Ensure singleton pattern
 		if (!EnsureSingleton()) return;
 
-		// Initialize systems
+		// Initialize all systems
 		InitializeNetworkManager();
+	}
+
+	void Update()
+	{
+		// Track network state changes for auto-recovery
+		if (PhotonNetwork.NetworkClientState != previousNetworkState)
+		{
+			Debug.Log($"🔄 Network State Changed: {previousNetworkState} → {PhotonNetwork.NetworkClientState}");
+			previousNetworkState = PhotonNetwork.NetworkClientState;
+			HandleNetworkStateChange(PhotonNetwork.NetworkClientState);
+		}
+	}
+
+	void HandleNetworkStateChange(ClientState newState)
+	{
+		switch (newState)
+		{
+			case ClientState.ConnectedToMasterServer:
+				if (currentStatus == UIStatus.InLobby)
+				{
+					Debug.LogWarning("🔍 Unexpected: Back to ConnectedToMaster from InLobby - auto-fixing");
+					UpdateStatusDisplay(UIStatus.ConnectedToMaster);
+					StartCoroutine(JoinLobbyWithRetry());
+				}
+				break;
+
+			case ClientState.JoinedLobby:
+				Debug.Log("✅ Confirmed joined lobby");
+				if (currentStatus != UIStatus.InLobby && currentStatus != UIStatus.JoiningLobby)
+				{
+					UpdateStatusDisplay(UIStatus.InLobby);
+					SetCreateRoomButtonState(true);
+				}
+				break;
+
+			case ClientState.Disconnected:
+				Debug.LogWarning("🔌 Detected disconnection");
+				if (lobbyMonitorCoroutine != null)
+				{
+					StopCoroutine(lobbyMonitorCoroutine);
+					lobbyMonitorCoroutine = null;
+				}
+				break;
+		}
 	}
 
 	bool EnsureSingleton()
@@ -121,6 +169,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		// Setup room list layout
 		SetupRoomListLayout();
 
+		// Start lobby state monitoring
+		lobbyMonitorCoroutine = StartCoroutine(MonitorLobbyState());
+
 		// Start connection
 		StartPhotonConnection();
 
@@ -144,6 +195,12 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		{
 			StopCoroutine(statusResetCoroutine);
 			statusResetCoroutine = null;
+		}
+
+		if (lobbyMonitorCoroutine != null)
+		{
+			StopCoroutine(lobbyMonitorCoroutine);
+			lobbyMonitorCoroutine = null;
 		}
 
 		Debug.Log("🔄 All states reset");
@@ -226,7 +283,106 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		PhotonNetwork.ConnectUsingSettings();
 	}
 
-	// ================= STATUS MANAGEMENT =================
+	// ================= LOBBY STATE MONITORING =================
+
+	IEnumerator MonitorLobbyState()
+	{
+		while (true)
+		{
+			yield return new WaitForSeconds(3f); // Check every 3 seconds
+
+			// Only monitor when we expect to be in lobby
+			if (currentStatus == UIStatus.InLobby || currentStatus == UIStatus.ConnectedToMaster)
+			{
+				if (PhotonNetwork.IsConnected && !PhotonNetwork.InLobby && !PhotonNetwork.InRoom)
+				{
+					Debug.LogWarning("🔍 Monitor detected: Connected but not in lobby - auto-fixing");
+
+					if (currentStatus != UIStatus.JoiningLobby)
+					{
+						UpdateStatusDisplay(UIStatus.JoiningLobby, "Kết nối lại lobby...");
+						StartCoroutine(JoinLobbyWithRetry());
+					}
+				}
+			}
+		}
+	}
+
+	IEnumerator JoinLobbyWithRetry(int maxRetries = 3)
+	{
+		int attempts = 0;
+
+		while (attempts < maxRetries && PhotonNetwork.IsConnected)
+		{
+			attempts++;
+			Debug.Log($"🏠 Joining lobby - attempt {attempts}/{maxRetries}");
+
+			bool requestSent = false;
+			System.Exception caughtException = null;
+
+			// 🔥 TRY-CATCH WITHOUT YIELD
+			try
+			{
+				PhotonNetwork.JoinLobby();
+				requestSent = true;
+			}
+			catch (System.Exception ex)
+			{
+				Debug.LogError($"❌ Join lobby attempt {attempts} exception: {ex.Message}");
+				caughtException = ex;
+				requestSent = false;
+			}
+
+			// 🔥 YIELD OUTSIDE OF TRY-CATCH
+			if (requestSent)
+			{
+				// Wait for result with timeout
+				float timeout = 10f;
+				float elapsed = 0f;
+
+				while (elapsed < timeout && !PhotonNetwork.InLobby && PhotonNetwork.IsConnected)
+				{
+					yield return new WaitForSeconds(0.2f);
+					elapsed += 0.2f;
+				}
+
+				if (PhotonNetwork.InLobby)
+				{
+					Debug.Log("✅ Successfully joined lobby");
+					yield break; // Success - exit retry loop
+				}
+				else if (!PhotonNetwork.IsConnected)
+				{
+					Debug.LogError("❌ Disconnected during lobby join attempt");
+					yield break; // Stop retrying if disconnected
+				}
+				else
+				{
+					Debug.LogWarning($"⚠️ Join lobby attempt {attempts} timed out");
+				}
+			}
+
+			if (attempts < maxRetries)
+			{
+				Debug.Log($"🔄 Retrying join lobby in 2 seconds...");
+				yield return new WaitForSeconds(2f);
+			}
+		}
+
+		// All retries failed or disconnected
+		if (PhotonNetwork.IsConnected)
+		{
+			Debug.LogError("❌ Failed to join lobby after all retries");
+			UpdateStatusDisplay(UIStatus.Error, "Không thể vào lobby!");
+		}
+		else
+		{
+			Debug.LogError("❌ Disconnected during lobby join attempts");
+			UpdateStatusDisplay(UIStatus.Disconnected, "Mất kết nối!");
+		}
+	}
+
+	// ================= STATUS MANAGEMENT SYSTEM =================
 
 	void UpdateStatusDisplay(UIStatus newStatus, string customMessage = "")
 	{
@@ -247,7 +403,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		// Setup auto-reset for temporary statuses
 		if (ShouldAutoResetStatus(newStatus))
 		{
-			statusResetCoroutine = StartCoroutine(ResetStatusAfterDelay(3f));
+			float resetDelay = GetStatusResetDelay(newStatus);
+			statusResetCoroutine = StartCoroutine(ResetStatusAfterDelay(resetDelay));
 		}
 
 		Debug.Log($"📱 Status updated: {newStatus} - '{statusMessage}'");
@@ -291,28 +448,66 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 	bool ShouldAutoResetStatus(UIStatus status)
 	{
-		return status == UIStatus.OperationCancelled ||
-			   status == UIStatus.Error ||
-			   status == UIStatus.InRoom;
+		switch (status)
+		{
+			case UIStatus.OperationCancelled:
+			case UIStatus.Error:
+				return true;
+			case UIStatus.InRoom:
+				// Only auto-reset InRoom status if not actually in a room
+				return !PhotonNetwork.InRoom;
+			default:
+				return false;
+		}
+	}
+
+	float GetStatusResetDelay(UIStatus status)
+	{
+		switch (status)
+		{
+			case UIStatus.OperationCancelled:
+				return 2f;
+			case UIStatus.Error:
+				return 4f; // Longer delay for errors
+			case UIStatus.InRoom:
+				return 3f;
+			default:
+				return 3f;
+		}
 	}
 
 	IEnumerator ResetStatusAfterDelay(float delay)
 	{
 		yield return new WaitForSeconds(delay);
 
-		// Only reset if we're still in a temporary status and in appropriate network state
+		// Only reset if we're still in a temporary status
 		if (ShouldAutoResetStatus(currentStatus))
 		{
-			if (PhotonNetwork.InLobby)
+			// Wait a bit more and re-check network state for accuracy
+			yield return new WaitForSeconds(0.3f);
+
+			if (PhotonNetwork.InRoom)
 			{
+				// Actually in a room - don't reset InRoom status
+				Debug.Log("📱 Still in room - keeping current status");
+			}
+			else if (PhotonNetwork.InLobby)
+			{
+				// Confirmed in lobby - show lobby status
+				Debug.Log("📱 Confirmed in lobby - resetting to InLobby status");
 				UpdateStatusDisplay(UIStatus.InLobby);
 			}
 			else if (PhotonNetwork.IsConnected)
 			{
-				UpdateStatusDisplay(UIStatus.ConnectedToMaster);
+				// Connected but not in lobby - try to rejoin lobby
+				Debug.Log("📱 Connected but not in lobby - attempting to rejoin lobby");
+				UpdateStatusDisplay(UIStatus.JoiningLobby, "Đang vào lobby...");
+				StartCoroutine(JoinLobbyWithRetry());
 			}
 			else
 			{
+				// Disconnected
+				Debug.Log("📱 Disconnected - showing disconnected status");
 				UpdateStatusDisplay(UIStatus.Disconnected);
 			}
 		}
@@ -611,7 +806,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		}
 	}
 
-	// ================= ROOM JOINING =================
+	// ================= ROOM JOINING SYSTEM =================
 
 	public void RequestJoinRoom(RoomInfo roomInfo)
 	{
@@ -621,7 +816,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 			return;
 		}
 
-		Debug.Log($"🚪 Request to join room: '{roomInfo.Name}'");
+		Debug.Log($"🚪 Request to join room: '{roomInfo.Name}' ({roomInfo.PlayerCount}/{roomInfo.MaxPlayers})");
 
 		if (!CanPerformRoomOperation("join room"))
 		{
@@ -671,6 +866,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		if (joinPasswordInput != null)
 		{
 			joinPasswordInput.text = "";
+			joinPasswordInput.Select();
 		}
 	}
 
@@ -738,14 +934,16 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		}
 	}
 
-	// ================= PHOTON CALLBACKS =================
+	// ================= PHOTON NETWORK CALLBACKS =================
 
 	public override void OnConnectedToMaster()
 	{
 		Debug.Log("🔗 Connected to Master Server");
 		UpdateStatusDisplay(UIStatus.ConnectedToMaster);
 		SetCreateRoomButtonState(false);
-		PhotonNetwork.JoinLobby();
+
+		// Start lobby join with retry mechanism
+		StartCoroutine(JoinLobbyWithRetry());
 	}
 
 	public override void OnJoinedLobby()
@@ -763,6 +961,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		SetCreateRoomButtonState(false);
 		ResetOperationFlags();
 		ClearJoinAttemptData();
+
+		// Stop lobby monitoring when disconnected
+		if (lobbyMonitorCoroutine != null)
+		{
+			StopCoroutine(lobbyMonitorCoroutine);
+			lobbyMonitorCoroutine = null;
+		}
 	}
 
 	public override void OnLeftLobby()
@@ -923,10 +1128,16 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		// Update UI
 		SwitchToLobbyPanel();
 
-		// Update status
+		// Update status based on network state
 		if (PhotonNetwork.InLobby)
 		{
 			UpdateStatusDisplay(UIStatus.InLobby, "Đã rời phòng");
+		}
+		else if (PhotonNetwork.IsConnected)
+		{
+			// Not in lobby after leaving room - try to rejoin
+			UpdateStatusDisplay(UIStatus.JoiningLobby, "Đang vào lobby...");
+			StartCoroutine(JoinLobbyWithRetry());
 		}
 		else
 		{
@@ -951,16 +1162,101 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 	public override void OnCreateRoomFailed(short returnCode, string message)
 	{
 		Debug.LogError($"❌ Create room failed - Code: {returnCode}, Message: {message}");
-		UpdateStatusDisplay(UIStatus.Error, $"Tạo phòng thất bại: {message}");
+
+		string userMessage = GetCreateRoomFailureMessage(returnCode, message);
+		UpdateStatusDisplay(UIStatus.Error, userMessage);
 		HandleRoomOperationFailure();
 	}
 
 	public override void OnJoinRoomFailed(short returnCode, string message)
 	{
 		Debug.LogError($"❌ Join room failed - Code: {returnCode}, Message: {message}");
-		UpdateStatusDisplay(UIStatus.Error, $"Vào phòng thất bại: {message}");
+
+		// Debug network state when join fails
+		LogNetworkStateOnJoinFailure();
+
+		string userMessage = GetJoinRoomFailureMessage(returnCode, message);
+		UpdateStatusDisplay(UIStatus.Error, userMessage);
 		HandleRoomOperationFailure();
 		ClearJoinAttemptData();
+
+		// 🔥 FIX: ENSURE WE'RE BACK IN LOBBY AFTER JOIN FAILURE
+		StartCoroutine(EnsureInLobbyAfterJoinFailure());
+	}
+
+	// 🔥 NEW: ENSURE WE'RE BACK IN LOBBY AFTER JOIN FAILURE
+	IEnumerator EnsureInLobbyAfterJoinFailure()
+	{
+		// Wait for network state to stabilize
+		yield return new WaitForSeconds(0.8f);
+
+		// Check if we're actually in lobby
+		if (!PhotonNetwork.InLobby && PhotonNetwork.IsConnected)
+		{
+			Debug.LogWarning("🔄 Not in lobby after join failure - forcing rejoin lobby");
+			UpdateStatusDisplay(UIStatus.JoiningLobby, "Đang kết nối lại lobby...");
+
+			// Use the retry mechanism to rejoin lobby
+			StartCoroutine(JoinLobbyWithRetry());
+		}
+		else if (PhotonNetwork.InLobby)
+		{
+			Debug.Log("✅ Already in lobby after join failure");
+			// Reset to correct lobby status after error message delay
+			yield return new WaitForSeconds(3f);
+			if (currentStatus == UIStatus.Error)
+			{
+				UpdateStatusDisplay(UIStatus.InLobby);
+			}
+		}
+		else if (!PhotonNetwork.IsConnected)
+		{
+			Debug.LogError("❌ Disconnected after join failure");
+			UpdateStatusDisplay(UIStatus.Disconnected, "Mất kết nối!");
+		}
+	}
+
+	void LogNetworkStateOnJoinFailure()
+	{
+		Debug.Log($"🔍 Network State on Join Failure:");
+		Debug.Log($"   PhotonNetwork.IsConnected: {PhotonNetwork.IsConnected}");
+		Debug.Log($"   PhotonNetwork.InLobby: {PhotonNetwork.InLobby}");
+		Debug.Log($"   PhotonNetwork.InRoom: {PhotonNetwork.InRoom}");
+		Debug.Log($"   PhotonNetwork.NetworkClientState: {PhotonNetwork.NetworkClientState}");
+	}
+
+	string GetCreateRoomFailureMessage(short returnCode, string originalMessage)
+	{
+		switch (returnCode)
+		{
+			case 32766: // Room name already exists
+				return "Tên phòng đã tồn tại!";
+			case 32765: // Game full
+				return "Server đang đầy!";
+			default:
+				return $"Tạo phòng thất bại: {originalMessage}";
+		}
+	}
+
+	string GetJoinRoomFailureMessage(short returnCode, string originalMessage)
+	{
+		switch (returnCode)
+		{
+			case 32746: // Room full
+				return "Phòng đã đầy người!";
+			case 32758: // Room does not exist
+				return "Phòng không tồn tại!";
+			case 32760: // Room closed
+				return "Phòng đã đóng!";
+			case 32761: // Max players reached
+				return "Đã đủ số người chơi tối đa!";
+			case 32764: // Game not found
+				return "Không tìm thấy phòng!";
+			case 32767: // Slot not available
+				return "Không có chỗ trống!";
+			default:
+				return $"Vào phòng thất bại: {originalMessage}";
+		}
 	}
 
 	public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
@@ -977,7 +1273,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 	public override void OnRoomListUpdate(List<RoomInfo> roomList)
 	{
-		Debug.Log($"📋 Room list updated - {roomList.Count} rooms");
+		Debug.Log($"📋 Room list updated - {roomList.Count} rooms received");
 		UpdateCachedRoomList(roomList);
 		RefreshRoomListUI();
 	}
@@ -1001,7 +1297,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		}
 	}
 
-	// ================= UI MANAGEMENT =================
+	// ================= UI MANAGEMENT SYSTEM =================
 
 	void SetCreateRoomButtonState(bool enabled)
 	{
@@ -1078,8 +1374,11 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 			noRoomsText.gameObject.SetActive(false);
 		}
 
-		// Sort rooms by name
-		var sortedRooms = cachedRoomList.Values.OrderBy(room => room.Name).ToList();
+		// Sort rooms by player count (descending) then by name
+		var sortedRooms = cachedRoomList.Values
+			.OrderByDescending(room => room.PlayerCount)
+			.ThenBy(room => room.Name)
+			.ToList();
 
 		foreach (RoomInfo roomInfo in sortedRooms)
 		{
@@ -1186,19 +1485,45 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		PhotonNetwork.LoadLevel("Gameplay");
 	}
 
-	// ================= DEBUG =================
+	void OnDestroy()
+	{
+		// Clean up coroutines when NetworkManager is destroyed
+		if (statusResetCoroutine != null)
+		{
+			StopCoroutine(statusResetCoroutine);
+		}
+
+		if (lobbyMonitorCoroutine != null)
+		{
+			StopCoroutine(lobbyMonitorCoroutine);
+		}
+	}
+
+	// ================= DEBUG SYSTEM =================
 
 	void OnGUI()
 	{
 		if (!Debug.isDebugBuild) return;
 
-		GUILayout.BeginArea(new Rect(10, 10, 300, 200));
+		GUILayout.BeginArea(new Rect(10, 10, 400, 300));
+		GUILayout.Box("NetworkManager Debug Info");
+
 		GUILayout.Label($"Network State: {PhotonNetwork.NetworkClientState}");
-		GUILayout.Label($"Current Status: {currentStatus}");
+		GUILayout.Label($"Current UI Status: {currentStatus}");
 		GUILayout.Label($"In Lobby: {PhotonNetwork.InLobby}");
+		GUILayout.Label($"In Room: {PhotonNetwork.InRoom}");
 		GUILayout.Label($"Is Creating Room: {isCreatingRoom}");
-		GUILayout.Label($"Is Processing: {isProcessingRoomOperation}");
+		GUILayout.Label($"Is Processing Operation: {isProcessingRoomOperation}");
 		GUILayout.Label($"Join Attempt Room: '{currentJoinAttemptRoomName}'");
+		GUILayout.Label($"Cached Rooms: {cachedRoomList.Count}");
+		GUILayout.Label($"Lobby Monitor Active: {lobbyMonitorCoroutine != null}");
+
+		if (PhotonNetwork.InRoom)
+		{
+			GUILayout.Label($"Current Room: {PhotonNetwork.CurrentRoom.Name}");
+			GUILayout.Label($"Players: {PhotonNetwork.CurrentRoom.PlayerCount}/{PhotonNetwork.CurrentRoom.MaxPlayers}");
+		}
+
 		GUILayout.EndArea();
 	}
 }
