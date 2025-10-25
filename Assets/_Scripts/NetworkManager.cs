@@ -184,28 +184,62 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 	public override void OnJoinedRoom()
 	{
+		Debug.Log($"🎉 Joined room: {PhotonNetwork.CurrentRoom.Name}");
+		Debug.Log($"   Is Master Client: {PhotonNetwork.IsMasterClient}");
+		Debug.Log($"   Was creating room: {isCreatingRoom}");
+
 		// Lưu tên người chơi
 		PlayerPrefs.SetString("playerName", PhotonNetwork.NickName);
 
-		// Kiểm tra mật khẩu nếu phòng private
 		Room current = PhotonNetwork.CurrentRoom;
-		if (current.CustomProperties.ContainsKey("pwd"))
+
+		// 🔥 FIX: CHỈ KIỂM TRA PASSWORD KHI KHÔNG PHẢI LÀ NGƯỜI TẠO PHÒNG
+		bool isRoomCreator = isCreatingRoom; // Nếu đang tạo phòng thì là creator
+		bool isPrivateRoom = current.CustomProperties.ContainsKey("pwd");
+
+		Debug.Log($"🔐 Password check: IsPrivate={isPrivateRoom}, IsCreator={isRoomCreator}");
+
+		if (isPrivateRoom && !isRoomCreator)
 		{
+			Debug.Log("🔍 Checking password for joining player...");
+
+			// CHỈ KIỂM TRA PASSWORD KHI JOIN PHÒNG (KHÔNG PHẢI TẠO PHÒNG)
 			if (!string.IsNullOrEmpty(lastAttemptJoinRoomName) && lastAttemptJoinRoomName == current.Name)
 			{
-				string expected = current.CustomProperties["pwd"] as string;
-				if (expected != lastAttemptJoinPassword)
+				string expectedPassword = current.CustomProperties["pwd"] as string;
+				string providedPassword = lastAttemptJoinPassword;
+
+				Debug.Log($"   Expected: '{expectedPassword}', Provided: '{providedPassword}'");
+
+				if (expectedPassword != providedPassword)
 				{
+					Debug.LogWarning("❌ Wrong password provided!");
 					StartCoroutine(ShowWrongPasswordAndLeave());
 					return;
+				}
+				else
+				{
+					Debug.Log("✅ Password correct!");
 				}
 			}
 			else
 			{
+				Debug.LogWarning("❌ No password provided for private room!");
 				StartCoroutine(ShowWrongPasswordAndLeave());
 				return;
 			}
 		}
+		else if (isPrivateRoom && isRoomCreator)
+		{
+			Debug.Log("✅ Room creator - skipping password check");
+		}
+		else
+		{
+			Debug.Log("✅ Public room or no password required");
+		}
+
+		// Reset room creation flag
+		isCreatingRoom = false;
 
 		// Hiển thị room panel
 		lobbyPanel.SetActive(false);
@@ -217,15 +251,26 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		}
 
 		UpdatePlayerListInRoomPanel();
+
+		Debug.Log("🎉 Successfully joined room and setup complete!");
 	}
 
 	System.Collections.IEnumerator ShowWrongPasswordAndLeave()
 	{
+		Debug.LogWarning("🚫 Wrong password - showing error and leaving...");
+
 		if (statusText != null) statusText.text = "Sai mật khẩu!";
+
 		yield return new WaitForSeconds(2f);
+
+		Debug.Log("🚪 Leaving room due to wrong password");
 		PhotonNetwork.LeaveRoom();
+
+		// Clear attempt data
 		lastAttemptJoinRoomName = "";
 		lastAttemptJoinPassword = "";
+
+		Debug.Log("🔄 Password attempt data cleared");
 	}
 
 	public override void OnLeftRoom()
@@ -369,6 +414,11 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		options.CustomRoomProperties = custom;
 		options.CustomRoomPropertiesForLobby = new string[] { "isPrivate" };
 
+		isCreatingRoom = true;
+		isProcessingRoomOperation = true;
+
+		Debug.Log("🔥 Setting isCreatingRoom = true");
+
 		// Thử tạo phòng
 		Debug.Log($"Attempting to create room: {roomName}");
 		try
@@ -380,6 +430,11 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 			{
 				if (statusText != null) statusText.text = "Đang tạo phòng...";
 				if (createRoomPanel != null) createRoomPanel.SetActive(false);
+
+				lastAttemptJoinRoomName = "";
+				lastAttemptJoinPassword = "";
+
+				Debug.Log("✅ Room creation initiated - flags cleared");
 			}
 			else
 			{
