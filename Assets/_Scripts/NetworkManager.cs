@@ -47,191 +47,332 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 	// Internal state management
 	private Dictionary<string, RoomInfo> cachedRoomList = new Dictionary<string, RoomInfo>();
-	private string lastAttemptJoinRoomName = "";
-	private string lastAttemptJoinPassword = "";
+	private string currentJoinAttemptRoomName = "";
+	private string currentJoinAttemptPassword = "";
 
+	// Operation flags
 	private bool isCreatingRoom = false;
 	private bool isProcessingRoomOperation = false;
 
 	// Status management
-	private Coroutine statusMessageCoroutine;
 	private enum UIStatus
 	{
 		Connecting,
+		ConnectedToMaster,
+		JoiningLobby,
 		InLobby,
 		CreatingRoom,
 		JoiningRoom,
 		InRoom,
+		LeavingRoom,
+		Disconnected,
 		Error,
-		Cancelled
+		OperationCancelled
 	}
-	private UIStatus currentUIStatus = UIStatus.Connecting;
+
+	private UIStatus currentStatus = UIStatus.Connecting;
+	private Coroutine statusResetCoroutine;
 
 	void Start()
 	{
-		// Ensure singleton
+		// Ensure singleton pattern
+		if (!EnsureSingleton()) return;
+
+		// Initialize systems
+		InitializeNetworkManager();
+	}
+
+	bool EnsureSingleton()
+	{
 		NetworkManager[] managers = FindObjectsByType<NetworkManager>(FindObjectsSortMode.None);
 		if (managers.Length > 1)
 		{
-			Debug.LogError($"FOUND {managers.Length} NetworkManager instances! Destroying duplicates.");
+			Debug.LogError($"⚠️ FOUND {managers.Length} NetworkManager instances! Destroying duplicates.");
 			for (int i = 1; i < managers.Length; i++)
 			{
 				Destroy(managers[i].gameObject);
 			}
-			return;
+			return false;
 		}
 
-		Debug.Log("✅ Only 1 NetworkManager found - OK");
+		Debug.Log("✅ NetworkManager singleton confirmed");
+		return true;
+	}
 
-		// Initialize UI state
-		SetCreateRoomButtonState(false);
-		UpdateStatusText(UIStatus.Connecting);
+	void InitializeNetworkManager()
+	{
+		Debug.Log("🚀 Initializing NetworkManager...");
 
+		// Reset all states
+		ResetAllStates();
+
+		// Initialize UI
+		InitializeUI();
+
+		// Setup Photon
 		PhotonNetwork.AutomaticallySyncScene = true;
 
-		// Setup UI listeners
+		// Setup event listeners
 		SetupUIListeners();
 
-		// Connect to Photon
-		PhotonNetwork.ConnectUsingSettings();
-
-		// Load saved player name
+		// Load player settings
 		LoadPlayerName();
 
 		// Setup room list layout
 		SetupRoomListLayout();
+
+		// Start connection
+		StartPhotonConnection();
+
+		Debug.Log("✅ NetworkManager initialization complete");
+	}
+
+	void ResetAllStates()
+	{
+		// Reset operation flags
+		isCreatingRoom = false;
+		isProcessingRoomOperation = false;
+
+		// Clear join attempt data
+		ClearJoinAttemptData();
+
+		// Reset status
+		currentStatus = UIStatus.Connecting;
+
+		// Stop any running coroutines
+		if (statusResetCoroutine != null)
+		{
+			StopCoroutine(statusResetCoroutine);
+			statusResetCoroutine = null;
+		}
+
+		Debug.Log("🔄 All states reset");
+	}
+
+	void InitializeUI()
+	{
+		// Set initial UI states
+		SetCreateRoomButtonState(false);
+		UpdateStatusDisplay(UIStatus.Connecting);
+
+		// Hide panels that should start hidden
+		if (createRoomPanel != null) createRoomPanel.SetActive(false);
+		if (joinPasswordModal != null) joinPasswordModal.SetActive(false);
+		if (roomPanel != null) roomPanel.SetActive(false);
+
+		Debug.Log("🎨 UI initialized");
 	}
 
 	void SetupUIListeners()
 	{
-		// Create room listeners
+		// Create room UI
 		if (createPrivateToggle != null)
 		{
+			createPrivateToggle.onValueChanged.RemoveAllListeners();
 			createPrivateToggle.onValueChanged.AddListener(OnPrivateToggleChanged);
 		}
 
 		if (createRoomButton != null)
 		{
-			createRoomButton.onClick.AddListener(OnClick_CreateRoom);
+			createRoomButton.onClick.RemoveAllListeners();
+			createRoomButton.onClick.AddListener(OnCreateRoomButtonClicked);
 		}
 
 		if (cancelCreateButton != null)
 		{
-			cancelCreateButton.onClick.AddListener(OnClickCancelCreateRoom);
+			cancelCreateButton.onClick.RemoveAllListeners();
+			cancelCreateButton.onClick.AddListener(OnCancelCreateRoomButtonClicked);
 		}
 
-		// Password modal listeners
+		// Password modal UI
 		if (confirmPasswordButton != null)
 		{
-			confirmPasswordButton.onClick.AddListener(OnConfirmJoinWithPassword);
+			confirmPasswordButton.onClick.RemoveAllListeners();
+			confirmPasswordButton.onClick.AddListener(OnConfirmPasswordButtonClicked);
 		}
 
 		if (cancelPasswordButton != null)
 		{
-			cancelPasswordButton.onClick.AddListener(() => {
-				joinPasswordModal.SetActive(false);
-			});
+			cancelPasswordButton.onClick.RemoveAllListeners();
+			cancelPasswordButton.onClick.AddListener(OnCancelPasswordButtonClicked);
 		}
+
+		Debug.Log("🔗 UI listeners setup complete");
 	}
 
 	void LoadPlayerName()
 	{
 		if (playerNameInput != null)
 		{
-			string saved = PlayerPrefs.GetString("playerName", "");
-			playerNameInput.text = saved;
-			PhotonNetwork.NickName = string.IsNullOrEmpty(saved) ? "Player" + Random.Range(1000, 9999) : saved;
+			string savedName = PlayerPrefs.GetString("playerName", "");
+			playerNameInput.text = savedName;
+
+			string finalName = string.IsNullOrEmpty(savedName) ? GenerateRandomPlayerName() : savedName;
+			PhotonNetwork.NickName = finalName;
+
+			Debug.Log($"👤 Player name loaded: {PhotonNetwork.NickName}");
 		}
+	}
+
+	string GenerateRandomPlayerName()
+	{
+		return "Player" + Random.Range(1000, 9999);
+	}
+
+	void StartPhotonConnection()
+	{
+		Debug.Log("🌐 Starting Photon connection...");
+		UpdateStatusDisplay(UIStatus.Connecting);
+		PhotonNetwork.ConnectUsingSettings();
 	}
 
 	// ================= STATUS MANAGEMENT =================
 
-	void UpdateStatusText(UIStatus newStatus, string customMessage = "")
+	void UpdateStatusDisplay(UIStatus newStatus, string customMessage = "")
 	{
-		currentUIStatus = newStatus;
+		// Stop any existing reset coroutine
+		if (statusResetCoroutine != null)
+		{
+			StopCoroutine(statusResetCoroutine);
+			statusResetCoroutine = null;
+		}
+
+		currentStatus = newStatus;
 
 		if (statusText == null) return;
 
-		// Stop any existing status message coroutine
-		if (statusMessageCoroutine != null)
+		string statusMessage = GetStatusMessage(newStatus, customMessage);
+		statusText.text = statusMessage;
+
+		// Setup auto-reset for temporary statuses
+		if (ShouldAutoResetStatus(newStatus))
 		{
-			StopCoroutine(statusMessageCoroutine);
-			statusMessageCoroutine = null;
+			statusResetCoroutine = StartCoroutine(ResetStatusAfterDelay(3f));
 		}
 
-		switch (newStatus)
-		{
-			case UIStatus.Connecting:
-				statusText.text = "Đang kết nối Photon...";
-				break;
-			case UIStatus.InLobby:
-				statusText.text = "Đã vào Lobby";
-				break;
-			case UIStatus.CreatingRoom:
-				statusText.text = "Đang tạo phòng...";
-				break;
-			case UIStatus.JoiningRoom:
-				statusText.text = "Đang vào phòng...";
-				break;
-			case UIStatus.InRoom:
-				statusText.text = "Đã vào phòng thành công!";
-				break;
-			case UIStatus.Cancelled:
-				statusText.text = "Đã hủy tạo phòng";
-				statusMessageCoroutine = StartCoroutine(ResetStatusAfterDelay(2f, UIStatus.InLobby));
-				break;
-			case UIStatus.Error:
-				statusText.text = customMessage;
-				statusMessageCoroutine = StartCoroutine(ResetStatusAfterDelay(3f, UIStatus.InLobby));
-				break;
-		}
-
-		Debug.Log($"📱 Status updated: {newStatus} - '{statusText.text}'");
+		Debug.Log($"📱 Status updated: {newStatus} - '{statusMessage}'");
 	}
 
-	IEnumerator ResetStatusAfterDelay(float delay, UIStatus resetToStatus)
+	string GetStatusMessage(UIStatus status, string customMessage)
+	{
+		if (!string.IsNullOrEmpty(customMessage))
+		{
+			return customMessage;
+		}
+
+		switch (status)
+		{
+			case UIStatus.Connecting:
+				return "Đang kết nối Photon...";
+			case UIStatus.ConnectedToMaster:
+				return "Đã kết nối. Đang vào Lobby...";
+			case UIStatus.JoiningLobby:
+				return "Đang vào Lobby...";
+			case UIStatus.InLobby:
+				return "Đã vào Lobby";
+			case UIStatus.CreatingRoom:
+				return "Đang tạo phòng...";
+			case UIStatus.JoiningRoom:
+				return "Đang vào phòng...";
+			case UIStatus.InRoom:
+				return "Đã vào phòng thành công!";
+			case UIStatus.LeavingRoom:
+				return "Đang rời phòng...";
+			case UIStatus.Disconnected:
+				return "Đã mất kết nối";
+			case UIStatus.OperationCancelled:
+				return "Đã hủy thao tác";
+			case UIStatus.Error:
+				return "Có lỗi xảy ra";
+			default:
+				return "Không xác định";
+		}
+	}
+
+	bool ShouldAutoResetStatus(UIStatus status)
+	{
+		return status == UIStatus.OperationCancelled ||
+			   status == UIStatus.Error ||
+			   status == UIStatus.InRoom;
+	}
+
+	IEnumerator ResetStatusAfterDelay(float delay)
 	{
 		yield return new WaitForSeconds(delay);
 
-		// Only reset if still in the temporary status and in appropriate network state
-		if ((currentUIStatus == UIStatus.Cancelled || currentUIStatus == UIStatus.Error) && PhotonNetwork.InLobby)
+		// Only reset if we're still in a temporary status and in appropriate network state
+		if (ShouldAutoResetStatus(currentStatus))
 		{
-			UpdateStatusText(resetToStatus);
+			if (PhotonNetwork.InLobby)
+			{
+				UpdateStatusDisplay(UIStatus.InLobby);
+			}
+			else if (PhotonNetwork.IsConnected)
+			{
+				UpdateStatusDisplay(UIStatus.ConnectedToMaster);
+			}
+			else
+			{
+				UpdateStatusDisplay(UIStatus.Disconnected);
+			}
 		}
 	}
 
-	// ================= FLAG MANAGEMENT =================
+	// ================= OPERATION STATE MANAGEMENT =================
 
-	void ResetRoomOperationFlags(bool silent = false)
+	void ClearJoinAttemptData()
 	{
-		bool wasProcessing = isCreatingRoom || isProcessingRoomOperation;
-
-		isCreatingRoom = false;
-		isProcessingRoomOperation = false;
-
-		if (!silent && wasProcessing)
-		{
-			Debug.Log("🔄 Room operation flags reset");
-		}
+		currentJoinAttemptRoomName = "";
+		currentJoinAttemptPassword = "";
+		Debug.Log("🔄 Join attempt data cleared");
 	}
 
-	bool CanPerformRoomOperation()
+	bool CanPerformRoomOperation(string operationName)
 	{
+		// Check network state
 		if (!PhotonNetwork.InLobby)
 		{
-			Debug.LogWarning("❌ Not in lobby - cannot perform room operation");
-			UpdateStatusText(UIStatus.Error, "Chưa kết nối vào lobby!");
+			Debug.LogWarning($"❌ Cannot {operationName}: Not in lobby (State: {PhotonNetwork.NetworkClientState})");
+			UpdateStatusDisplay(UIStatus.Error, "Chưa kết nối vào lobby!");
 			return false;
 		}
 
-		if (isCreatingRoom || isProcessingRoomOperation)
+		// Check operation flags
+		if (isProcessingRoomOperation)
 		{
-			Debug.LogWarning("❌ Already processing room operation - ignoring");
-			UpdateStatusText(UIStatus.Error, "Đang xử lý...");
+			Debug.LogWarning($"❌ Cannot {operationName}: Already processing room operation");
+			UpdateStatusDisplay(UIStatus.Error, "Đang xử lý thao tác khác...");
 			return false;
 		}
 
 		return true;
+	}
+
+	void SetOperationInProgress(bool inProgress, string operationType = "")
+	{
+		isProcessingRoomOperation = inProgress;
+
+		if (inProgress)
+		{
+			Debug.Log($"🔄 Operation started: {operationType}");
+		}
+		else
+		{
+			Debug.Log($"✅ Operation completed/reset: {operationType}");
+		}
+	}
+
+	void ResetOperationFlags()
+	{
+		bool wasInProgress = isCreatingRoom || isProcessingRoomOperation;
+
+		isCreatingRoom = false;
+		isProcessingRoomOperation = false;
+
+		if (wasInProgress)
+		{
+			Debug.Log("🔄 Operation flags reset");
+		}
 	}
 
 	// ================= UI EVENT HANDLERS =================
@@ -242,326 +383,107 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		{
 			passwordContainer.SetActive(isPrivate);
 		}
+		Debug.Log($"🔒 Private toggle changed: {isPrivate}");
 	}
 
 	public void ShowCreateRoomPanel()
 	{
-		Debug.Log("🎯 ShowCreateRoomPanel called");
+		Debug.Log("🎯 ShowCreateRoomPanel requested");
 
-		if (!CanPerformRoomOperation())
+		if (!CanPerformRoomOperation("show create room panel"))
 		{
 			return;
 		}
 
-		// Open panel and reset form
-		createRoomPanel.SetActive(true);
+		// Show panel
+		if (createRoomPanel != null)
+		{
+			createRoomPanel.SetActive(true);
+		}
 
-		// Reset form fields
+		// Reset form
+		ResetCreateRoomForm();
+
+		Debug.Log("✅ Create room panel shown");
+	}
+
+	void ResetCreateRoomForm()
+	{
 		if (createRoomNameInput != null) createRoomNameInput.text = "";
 		if (createPrivateToggle != null) createPrivateToggle.isOn = false;
 		if (createPasswordInput != null) createPasswordInput.text = "";
 		if (passwordContainer != null) passwordContainer.SetActive(false);
 
-		Debug.Log("✅ Create room panel opened and form reset");
+		Debug.Log("📝 Create room form reset");
 	}
 
-	public void OnClickCancelCreateRoom()
-	{
-		Debug.Log("🚫 Cancel Create Room clicked");
-
-		// Reset flags
-		ResetRoomOperationFlags();
-
-		// Close create room panel
-		if (createRoomPanel != null)
-		{
-			createRoomPanel.SetActive(false);
-		}
-
-		// Update status with timed message
-		UpdateStatusText(UIStatus.Cancelled);
-
-		Debug.Log("✅ Create room operation cancelled");
-	}
-
-	// ================= PHOTON CALLBACKS =================
-
-	public override void OnConnectedToMaster()
-	{
-		Debug.Log("🔗 Connected to Master Server");
-		UpdateStatusText(UIStatus.Connecting, "Đã kết nối. Đang vào Lobby...");
-		SetCreateRoomButtonState(false);
-		PhotonNetwork.JoinLobby();
-	}
-
-	public override void OnJoinedLobby()
-	{
-		Debug.Log("🏠 Joined Lobby");
-		UpdateStatusText(UIStatus.InLobby);
-		SetCreateRoomButtonState(true);
-		ClearRoomListUI();
-	}
-
-	public override void OnDisconnected(DisconnectCause cause)
-	{
-		Debug.LogWarning($"🔌 Disconnected: {cause}");
-		UpdateStatusText(UIStatus.Error, $"Mất kết nối: {cause}");
-		SetCreateRoomButtonState(false);
-		ResetRoomOperationFlags();
-	}
-
-	public override void OnLeftLobby()
-	{
-		Debug.Log("🚪 Left lobby");
-		UpdateStatusText(UIStatus.Error, "Đã rời Lobby");
-		SetCreateRoomButtonState(false);
-		ResetRoomOperationFlags();
-	}
-
-	public override void OnRoomListUpdate(List<RoomInfo> roomList)
-	{
-		// Update cached room list
-		foreach (RoomInfo info in roomList)
-		{
-			if (info.RemovedFromList)
-			{
-				if (cachedRoomList.ContainsKey(info.Name))
-					cachedRoomList.Remove(info.Name);
-			}
-			else
-			{
-				cachedRoomList[info.Name] = info;
-			}
-		}
-		RefreshRoomListUI();
-	}
-
-	public override void OnJoinedRoom()
-	{
-		Debug.Log($"🎉 Joined room: {PhotonNetwork.CurrentRoom.Name}");
-		Debug.Log($"   Is Master Client: {PhotonNetwork.IsMasterClient}");
-		Debug.Log($"   Was creating room: {isCreatingRoom}");
-
-		// Save player name
-		PlayerPrefs.SetString("playerName", PhotonNetwork.NickName);
-
-		Room current = PhotonNetwork.CurrentRoom;
-
-		// Check password only for joining players (not room creators)
-		bool isRoomCreator = isCreatingRoom;
-		bool isPrivateRoom = current.CustomProperties.ContainsKey("pwd");
-
-		Debug.Log($"🔐 Password check: IsPrivate={isPrivateRoom}, IsCreator={isRoomCreator}");
-
-		if (isPrivateRoom && !isRoomCreator)
-		{
-			Debug.Log("🔍 Checking password for joining player...");
-
-			if (!string.IsNullOrEmpty(lastAttemptJoinRoomName) && lastAttemptJoinRoomName == current.Name)
-			{
-				string expectedPassword = current.CustomProperties["pwd"] as string;
-				string providedPassword = lastAttemptJoinPassword;
-
-				Debug.Log($"   Expected: '{expectedPassword}', Provided: '{providedPassword}'");
-
-				if (expectedPassword != providedPassword)
-				{
-					Debug.LogWarning("❌ Wrong password provided!");
-					StartCoroutine(ShowWrongPasswordAndLeave());
-					return;
-				}
-				else
-				{
-					Debug.Log("✅ Password correct!");
-				}
-			}
-			else
-			{
-				Debug.LogWarning("❌ No password provided for private room!");
-				StartCoroutine(ShowWrongPasswordAndLeave());
-				return;
-			}
-		}
-		else if (isPrivateRoom && isRoomCreator)
-		{
-			Debug.Log("✅ Room creator - skipping password check");
-		}
-		else
-		{
-			Debug.Log("✅ Public room or no password required");
-		}
-
-		// Update UI status
-		UpdateStatusText(UIStatus.InRoom);
-
-		// Reset room operation flags
-		ResetRoomOperationFlags();
-
-		// Show room panel
-		lobbyPanel.SetActive(false);
-		roomPanel.SetActive(true);
-
-		if (roomPanelManager != null)
-		{
-			roomPanelManager.SetupRoom(current.Name, current.MaxPlayers);
-		}
-
-		UpdatePlayerListInRoomPanel();
-
-		Debug.Log("🎉 Successfully joined room and setup complete!");
-	}
-
-	IEnumerator ShowWrongPasswordAndLeave()
-	{
-		Debug.LogWarning("🚫 Wrong password - showing error and leaving...");
-		UpdateStatusText(UIStatus.Error, "Sai mật khẩu!");
-
-		yield return new WaitForSeconds(2f);
-
-		Debug.Log("🚪 Leaving room due to wrong password");
-		PhotonNetwork.LeaveRoom();
-
-		// Clear attempt data
-		lastAttemptJoinRoomName = "";
-		lastAttemptJoinPassword = "";
-
-		Debug.Log("🔄 Password attempt data cleared");
-	}
-
-	public override void OnLeftRoom()
-	{
-		Debug.Log("🚪 Left room");
-
-		if (this == null) return;
-
-		ResetRoomOperationFlags();
-
-		// Update UI
-		if (roomPanel != null)
-			try { roomPanel.SetActive(false); } catch { }
-
-		if (lobbyPanel != null)
-			try { lobbyPanel.SetActive(true); } catch { }
-
-		UpdateStatusText(UIStatus.InLobby, "Đã rời phòng");
-
-		// Re-enable create room button if needed
-		if (createRoomButton != null)
-		{
-			createRoomButton.interactable = true;
-		}
-	}
-
-	public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
-	{
-		Debug.Log($"👋 Player entered room: {newPlayer.NickName}");
-		UpdatePlayerListInRoomPanel();
-	}
-
-	public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
-	{
-		Debug.Log($"👋 Player left room: {otherPlayer.NickName}");
-		UpdatePlayerListInRoomPanel();
-	}
-
-	// ================= ROOM OPERATIONS =================
-
-	public void OnPlayerNameChanged(string name)
-	{
-		PhotonNetwork.NickName = string.IsNullOrEmpty(name) ? "Player" + Random.Range(1000, 9999) : name;
-		Debug.Log($"🏷️ Player name changed to: {PhotonNetwork.NickName}");
-	}
-
-	public void OnClick_CreateRoom()
+	public void OnCreateRoomButtonClicked()
 	{
 		Debug.Log("🎯 Create Room button clicked");
 
-		// Check if we can perform room operation
-		if (!CanPerformRoomOperation())
+		if (!CanPerformRoomOperation("create room"))
 		{
 			return;
 		}
 
-		// Validate inputs before setting flags
+		// Validate inputs
 		if (!ValidateCreateRoomInputs())
 		{
 			return;
 		}
 
+		// Clear any previous join attempt data
+		ClearJoinAttemptData();
+
 		// Set operation flags
 		isCreatingRoom = true;
-		isProcessingRoomOperation = true;
-		UpdateStatusText(UIStatus.CreatingRoom);
+		SetOperationInProgress(true, "creating room");
+		UpdateStatusDisplay(UIStatus.CreatingRoom);
 
-		Debug.Log("🔥 Room creation flags set");
-
-		// Get room configuration
-		string roomName = createRoomNameInput.text.Trim();
-		byte maxPlayers = GetMaxPlayersFromInput();
-		bool isPrivate = createPrivateToggle != null && createPrivateToggle.isOn;
-		string password = isPrivate && createPasswordInput != null ? createPasswordInput.text.Trim() : "";
-
-		// Create room options
-		RoomOptions options = CreateRoomOptions(maxPlayers, isPrivate, password);
-
-		// Debug room creation
-		Debug.Log($"Attempting to create room: '{roomName}' (Max: {maxPlayers}, Private: {isPrivate})");
-
-		try
-		{
-			bool result = PhotonNetwork.CreateRoom(roomName, options);
-			Debug.Log($"PhotonNetwork.CreateRoom result: {result}");
-
-			if (result)
-			{
-				// Success - close panel and clear join attempt data
-				if (createRoomPanel != null) createRoomPanel.SetActive(false);
-				lastAttemptJoinRoomName = "";
-				lastAttemptJoinPassword = "";
-
-				Debug.Log("✅ Room creation initiated successfully");
-			}
-			else
-			{
-				Debug.LogError("PhotonNetwork.CreateRoom returned false!");
-				UpdateStatusText(UIStatus.Error, "Không thể tạo phòng!");
-				ResetRoomOperationFlags();
-			}
-		}
-		catch (System.Exception e)
-		{
-			Debug.LogError($"Exception when creating room: {e.Message}");
-			UpdateStatusText(UIStatus.Error, $"Lỗi tạo phòng: {e.Message}");
-			ResetRoomOperationFlags();
-		}
+		// Execute room creation
+		ExecuteRoomCreation();
 	}
 
 	bool ValidateCreateRoomInputs()
 	{
-		// Check room name input
+		// Validate room name
 		if (createRoomNameInput == null)
 		{
-			Debug.LogError("createRoomNameInput is null!");
-			UpdateStatusText(UIStatus.Error, "Lỗi: Không tìm thấy ô nhập tên phòng!");
+			Debug.LogError("❌ Room name input is null");
+			UpdateStatusDisplay(UIStatus.Error, "Lỗi: Không tìm thấy ô nhập tên phòng");
 			return false;
 		}
 
 		string roomName = createRoomNameInput.text.Trim();
 		if (string.IsNullOrEmpty(roomName))
 		{
-			Debug.LogWarning("Room name is empty!");
-			UpdateStatusText(UIStatus.Error, "Tên phòng không được trống!");
+			Debug.LogWarning("❌ Room name is empty");
+			UpdateStatusDisplay(UIStatus.Error, "Tên phòng không được trống!");
 			return false;
 		}
 
-		// Check private room password
+		if (roomName.Length > 20)
+		{
+			Debug.LogWarning("❌ Room name too long");
+			UpdateStatusDisplay(UIStatus.Error, "Tên phòng không được quá 20 ký tự!");
+			return false;
+		}
+
+		// Validate private room settings
 		bool isPrivate = createPrivateToggle != null && createPrivateToggle.isOn;
 		if (isPrivate)
 		{
 			if (createPasswordInput == null || string.IsNullOrEmpty(createPasswordInput.text.Trim()))
 			{
-				Debug.LogWarning("Private room selected but no password provided!");
-				UpdateStatusText(UIStatus.Error, "Phòng riêng tư cần có mật khẩu!");
+				Debug.LogWarning("❌ Private room requires password");
+				UpdateStatusDisplay(UIStatus.Error, "Phòng riêng tư cần có mật khẩu!");
+				return false;
+			}
+
+			if (createPasswordInput.text.Trim().Length < 3)
+			{
+				Debug.LogWarning("❌ Password too short");
+				UpdateStatusDisplay(UIStatus.Error, "Mật khẩu phải có ít nhất 3 ký tự!");
 				return false;
 			}
 		}
@@ -569,23 +491,69 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		return true;
 	}
 
-	byte GetMaxPlayersFromInput()
+	void ExecuteRoomCreation()
 	{
-		byte defaultMaxPlayers = 2;
+		string roomName = createRoomNameInput.text.Trim();
+		byte maxPlayers = GetValidatedMaxPlayers();
+		bool isPrivate = createPrivateToggle != null && createPrivateToggle.isOn;
+		string password = isPrivate && createPasswordInput != null ? createPasswordInput.text.Trim() : "";
 
-		if (createMaxPlayersInput != null && !string.IsNullOrEmpty(createMaxPlayersInput.text))
+		Debug.Log($"🏗️ Creating room: '{roomName}' (Max: {maxPlayers}, Private: {isPrivate})");
+
+		try
 		{
-			if (byte.TryParse(createMaxPlayersInput.text, out byte v) && v > 0 && v <= 20)
+			RoomOptions roomOptions = CreateRoomOptions(maxPlayers, isPrivate, password);
+			bool result = PhotonNetwork.CreateRoom(roomName, roomOptions);
+
+			if (result)
 			{
-				return v;
+				// Close create room panel
+				if (createRoomPanel != null)
+				{
+					createRoomPanel.SetActive(false);
+				}
+
+				Debug.Log("✅ Room creation request sent successfully");
 			}
 			else
 			{
-				Debug.LogWarning($"Invalid max players: '{createMaxPlayersInput.text}' - using default: {defaultMaxPlayers}");
+				Debug.LogError("❌ PhotonNetwork.CreateRoom returned false");
+				UpdateStatusDisplay(UIStatus.Error, "Không thể tạo phòng!");
+				HandleRoomOperationFailure();
+			}
+		}
+		catch (System.Exception ex)
+		{
+			Debug.LogError($"❌ Exception during room creation: {ex.Message}");
+			UpdateStatusDisplay(UIStatus.Error, $"Lỗi tạo phòng: {ex.Message}");
+			HandleRoomOperationFailure();
+		}
+	}
+
+	byte GetValidatedMaxPlayers()
+	{
+		byte defaultMax = 2;
+
+		if (createMaxPlayersInput != null && !string.IsNullOrEmpty(createMaxPlayersInput.text))
+		{
+			if (byte.TryParse(createMaxPlayersInput.text, out byte parsed))
+			{
+				if (parsed >= 2 && parsed <= 20)
+				{
+					return parsed;
+				}
+				else
+				{
+					Debug.LogWarning($"⚠️ Invalid max players: {parsed}, using default: {defaultMax}");
+				}
+			}
+			else
+			{
+				Debug.LogWarning($"⚠️ Could not parse max players: '{createMaxPlayersInput.text}', using default: {defaultMax}");
 			}
 		}
 
-		return defaultMaxPlayers;
+		return defaultMax;
 	}
 
 	RoomOptions CreateRoomOptions(byte maxPlayers, bool isPrivate, string password)
@@ -597,14 +565,14 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 			IsOpen = true
 		};
 
-		// Set custom properties
+		// Setup custom properties
 		Hashtable customProperties = new Hashtable();
 		customProperties["isPrivate"] = isPrivate;
 
 		if (isPrivate && !string.IsNullOrEmpty(password))
 		{
 			customProperties["pwd"] = password;
-			Debug.Log($"Password set for private room");
+			Debug.Log("🔒 Password set for private room");
 		}
 
 		options.CustomRoomProperties = customProperties;
@@ -613,109 +581,531 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		return options;
 	}
 
+	public void OnCancelCreateRoomButtonClicked()
+	{
+		Debug.Log("🚫 Cancel Create Room button clicked");
+
+		// Reset operation flags
+		ResetOperationFlags();
+
+		// Close panel
+		if (createRoomPanel != null)
+		{
+			createRoomPanel.SetActive(false);
+		}
+
+		// Update status
+		UpdateStatusDisplay(UIStatus.OperationCancelled);
+
+		Debug.Log("✅ Create room operation cancelled");
+	}
+
+	void HandleRoomOperationFailure()
+	{
+		ResetOperationFlags();
+
+		// Re-enable UI elements if needed
+		if (createRoomButton != null)
+		{
+			createRoomButton.interactable = true;
+		}
+	}
+
+	// ================= ROOM JOINING =================
+
+	public void RequestJoinRoom(RoomInfo roomInfo)
+	{
+		if (roomInfo == null)
+		{
+			Debug.LogError("❌ RoomInfo is null");
+			return;
+		}
+
+		Debug.Log($"🚪 Request to join room: '{roomInfo.Name}'");
+
+		if (!CanPerformRoomOperation("join room"))
+		{
+			return;
+		}
+
+		// Clear previous join data first
+		ClearJoinAttemptData();
+
+		// Set new join attempt data
+		currentJoinAttemptRoomName = roomInfo.Name;
+
+		// Check if room is private
+		bool isPrivate = IsRoomPrivate(roomInfo);
+
+		if (isPrivate)
+		{
+			ShowPasswordModal(roomInfo.Name);
+		}
+		else
+		{
+			ExecuteRoomJoin(roomInfo.Name, "");
+		}
+	}
+
+	bool IsRoomPrivate(RoomInfo roomInfo)
+	{
+		return roomInfo.CustomProperties != null &&
+			   roomInfo.CustomProperties.ContainsKey("isPrivate") &&
+			   (bool)roomInfo.CustomProperties["isPrivate"];
+	}
+
+	void ShowPasswordModal(string roomName)
+	{
+		Debug.Log($"🔒 Showing password modal for room: {roomName}");
+
+		if (joinPasswordModal != null)
+		{
+			joinPasswordModal.SetActive(true);
+		}
+
+		if (joinPasswordRoomNameText != null)
+		{
+			joinPasswordRoomNameText.text = roomName;
+		}
+
+		if (joinPasswordInput != null)
+		{
+			joinPasswordInput.text = "";
+		}
+	}
+
+	public void OnConfirmPasswordButtonClicked()
+	{
+		Debug.Log("🔓 Password confirmation clicked");
+
+		string roomName = currentJoinAttemptRoomName;
+		string password = joinPasswordInput != null ? joinPasswordInput.text : "";
+
+		// Close password modal
+		if (joinPasswordModal != null)
+		{
+			joinPasswordModal.SetActive(false);
+		}
+
+		if (string.IsNullOrEmpty(roomName))
+		{
+			Debug.LogError("❌ No room name for password confirmation");
+			UpdateStatusDisplay(UIStatus.Error, "Lỗi: Không có tên phòng!");
+			return;
+		}
+
+		ExecuteRoomJoin(roomName, password);
+	}
+
+	public void OnCancelPasswordButtonClicked()
+	{
+		Debug.Log("🚫 Password input cancelled");
+
+		// Close password modal
+		if (joinPasswordModal != null)
+		{
+			joinPasswordModal.SetActive(false);
+		}
+
+		// Clear join attempt data
+		ClearJoinAttemptData();
+
+		UpdateStatusDisplay(UIStatus.OperationCancelled);
+	}
+
+	void ExecuteRoomJoin(string roomName, string password)
+	{
+		Debug.Log($"🚪 Executing room join: '{roomName}'");
+
+		// Set join attempt data
+		currentJoinAttemptRoomName = roomName;
+		currentJoinAttemptPassword = password;
+
+		// Set operation flags
+		SetOperationInProgress(true, "joining room");
+		UpdateStatusDisplay(UIStatus.JoiningRoom);
+
+		try
+		{
+			PhotonNetwork.JoinRoom(roomName);
+			Debug.Log($"✅ Room join request sent for: {roomName}");
+		}
+		catch (System.Exception ex)
+		{
+			Debug.LogError($"❌ Exception during room join: {ex.Message}");
+			UpdateStatusDisplay(UIStatus.Error, $"Lỗi vào phòng: {ex.Message}");
+			HandleRoomOperationFailure();
+		}
+	}
+
+	// ================= PHOTON CALLBACKS =================
+
+	public override void OnConnectedToMaster()
+	{
+		Debug.Log("🔗 Connected to Master Server");
+		UpdateStatusDisplay(UIStatus.ConnectedToMaster);
+		SetCreateRoomButtonState(false);
+		PhotonNetwork.JoinLobby();
+	}
+
+	public override void OnJoinedLobby()
+	{
+		Debug.Log("🏠 Joined Lobby successfully");
+		UpdateStatusDisplay(UIStatus.InLobby);
+		SetCreateRoomButtonState(true);
+		ClearRoomListUI();
+	}
+
+	public override void OnDisconnected(DisconnectCause cause)
+	{
+		Debug.LogWarning($"🔌 Disconnected from Photon: {cause}");
+		UpdateStatusDisplay(UIStatus.Disconnected, $"Mất kết nối: {cause}");
+		SetCreateRoomButtonState(false);
+		ResetOperationFlags();
+		ClearJoinAttemptData();
+	}
+
+	public override void OnLeftLobby()
+	{
+		Debug.Log("🚪 Left Lobby");
+		UpdateStatusDisplay(UIStatus.Disconnected, "Đã rời Lobby");
+		SetCreateRoomButtonState(false);
+		ResetOperationFlags();
+		ClearJoinAttemptData();
+	}
+
+	public override void OnJoinedRoom()
+	{
+		Debug.Log($"🎉 Successfully joined room: '{PhotonNetwork.CurrentRoom.Name}'");
+		LogRoomJoinDetails();
+
+		// Save player name
+		PlayerPrefs.SetString("playerName", PhotonNetwork.NickName);
+
+		Room currentRoom = PhotonNetwork.CurrentRoom;
+
+		// Handle password validation for private rooms
+		if (!HandlePrivateRoomValidation(currentRoom))
+		{
+			return; // Password validation failed, will leave room
+		}
+
+		// Success - complete room join
+		CompleteRoomJoin(currentRoom);
+	}
+
+	void LogRoomJoinDetails()
+	{
+		Debug.Log($"   Room Name: {PhotonNetwork.CurrentRoom.Name}");
+		Debug.Log($"   Player Count: {PhotonNetwork.CurrentRoom.PlayerCount}/{PhotonNetwork.CurrentRoom.MaxPlayers}");
+		Debug.Log($"   Is Master Client: {PhotonNetwork.IsMasterClient}");
+		Debug.Log($"   Was Creating Room: {isCreatingRoom}");
+		Debug.Log($"   Join Attempt Room: '{currentJoinAttemptRoomName}'");
+		Debug.Log($"   Join Attempt Password: '{currentJoinAttemptPassword}'");
+	}
+
+	bool HandlePrivateRoomValidation(Room room)
+	{
+		bool isPrivateRoom = room.CustomProperties.ContainsKey("pwd");
+		bool isRoomCreator = isCreatingRoom;
+
+		Debug.Log($"🔐 Private room validation - IsPrivate: {isPrivateRoom}, IsCreator: {isRoomCreator}");
+
+		if (!isPrivateRoom)
+		{
+			Debug.Log("✅ Public room - no password validation needed");
+			return true;
+		}
+
+		if (isRoomCreator)
+		{
+			Debug.Log("✅ Room creator - skipping password validation");
+			return true;
+		}
+
+		// Validate password for joining players
+		return ValidateRoomPassword(room);
+	}
+
+	bool ValidateRoomPassword(Room room)
+	{
+		Debug.Log("🔍 Validating room password for joining player");
+
+		// Check if we have join attempt data
+		if (string.IsNullOrEmpty(currentJoinAttemptRoomName))
+		{
+			Debug.LogWarning("❌ No join attempt room name");
+			StartCoroutine(LeaveRoomWithMessage("Lỗi xác thực phòng!"));
+			return false;
+		}
+
+		// Verify we're joining the correct room
+		if (!currentJoinAttemptRoomName.Equals(room.Name, System.StringComparison.OrdinalIgnoreCase))
+		{
+			Debug.LogWarning($"❌ Room name mismatch! Expected: '{currentJoinAttemptRoomName}', Got: '{room.Name}'");
+			StartCoroutine(LeaveRoomWithMessage("Phòng không đúng!"));
+			return false;
+		}
+
+		// Check password
+		string expectedPassword = room.CustomProperties["pwd"] as string;
+		string providedPassword = currentJoinAttemptPassword;
+
+		Debug.Log($"   Expected: '{expectedPassword}', Provided: '{providedPassword}'");
+
+		if (expectedPassword != providedPassword)
+		{
+			Debug.LogWarning("❌ Wrong password provided!");
+			StartCoroutine(LeaveRoomWithMessage("Sai mật khẩu!"));
+			return false;
+		}
+
+		Debug.Log("✅ Password validation successful");
+		return true;
+	}
+
+	IEnumerator LeaveRoomWithMessage(string message)
+	{
+		UpdateStatusDisplay(UIStatus.Error, message);
+		yield return new WaitForSeconds(2f);
+
+		Debug.Log($"🚪 Leaving room due to: {message}");
+		PhotonNetwork.LeaveRoom();
+		ClearJoinAttemptData();
+	}
+
+	void CompleteRoomJoin(Room room)
+	{
+		Debug.Log("✅ Completing room join process");
+
+		// Update status
+		UpdateStatusDisplay(UIStatus.InRoom);
+
+		// Clear join attempt data
+		ClearJoinAttemptData();
+
+		// Reset operation flags
+		ResetOperationFlags();
+
+		// Switch to room panel
+		SwitchToRoomPanel();
+
+		// Setup room UI
+		SetupRoomUI(room);
+
+		Debug.Log("🎉 Room join completed successfully!");
+	}
+
+	void SwitchToRoomPanel()
+	{
+		if (lobbyPanel != null) lobbyPanel.SetActive(false);
+		if (roomPanel != null) roomPanel.SetActive(true);
+	}
+
+	void SetupRoomUI(Room room)
+	{
+		if (roomPanelManager != null)
+		{
+			roomPanelManager.SetupRoom(room.Name, room.MaxPlayers);
+		}
+
+		UpdatePlayerListInRoomPanel();
+	}
+
+	public override void OnLeftRoom()
+	{
+		Debug.Log("🚪 Left room successfully");
+
+		// Clear all room-related data
+		ClearJoinAttemptData();
+		ResetOperationFlags();
+
+		// Update UI
+		SwitchToLobbyPanel();
+
+		// Update status
+		if (PhotonNetwork.InLobby)
+		{
+			UpdateStatusDisplay(UIStatus.InLobby, "Đã rời phòng");
+		}
+		else
+		{
+			UpdateStatusDisplay(UIStatus.Disconnected, "Đã rời phòng và lobby");
+		}
+
+		// Re-enable UI elements
+		if (createRoomButton != null)
+		{
+			createRoomButton.interactable = true;
+		}
+
+		Debug.Log("✅ Room leave handled successfully");
+	}
+
+	void SwitchToLobbyPanel()
+	{
+		if (roomPanel != null) roomPanel.SetActive(false);
+		if (lobbyPanel != null) lobbyPanel.SetActive(true);
+	}
+
 	public override void OnCreateRoomFailed(short returnCode, string message)
 	{
-		Debug.LogError($"❌ Create room failed: {message} (Code: {returnCode})");
-		UpdateStatusText(UIStatus.Error, $"Tạo phòng thất bại: {message}");
-		ResetRoomOperationFlags();
+		Debug.LogError($"❌ Create room failed - Code: {returnCode}, Message: {message}");
+		UpdateStatusDisplay(UIStatus.Error, $"Tạo phòng thất bại: {message}");
+		HandleRoomOperationFailure();
 	}
 
 	public override void OnJoinRoomFailed(short returnCode, string message)
 	{
-		Debug.LogError($"❌ Join room failed: {message} (Code: {returnCode})");
-		UpdateStatusText(UIStatus.Error, $"Vào phòng thất bại: {message}");
-		ResetRoomOperationFlags();
+		Debug.LogError($"❌ Join room failed - Code: {returnCode}, Message: {message}");
+		UpdateStatusDisplay(UIStatus.Error, $"Vào phòng thất bại: {message}");
+		HandleRoomOperationFailure();
+		ClearJoinAttemptData();
 	}
 
-	public void RequestJoinRoom(RoomInfo info)
+	public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
 	{
-		Debug.Log($"🚪 Requesting to join room: {info.Name}");
-
-		bool isPrivate = info.CustomProperties != null &&
-						info.CustomProperties.ContainsKey("isPrivate") &&
-						(bool)info.CustomProperties["isPrivate"];
-
-		if (isPrivate)
-		{
-			// Show password modal for private rooms
-			joinPasswordModal.SetActive(true);
-			joinPasswordRoomNameText.text = info.Name;
-			joinPasswordInput.text = "";
-			lastAttemptJoinRoomName = info.Name;
-		}
-		else
-		{
-			// Join public room directly
-			lastAttemptJoinRoomName = info.Name;
-			lastAttemptJoinPassword = "";
-			UpdateStatusText(UIStatus.JoiningRoom);
-			PhotonNetwork.JoinRoom(info.Name);
-		}
+		Debug.Log($"👋 Player joined room: {newPlayer.NickName}");
+		UpdatePlayerListInRoomPanel();
 	}
 
-	public void OnConfirmJoinWithPassword()
+	public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
 	{
-		string roomName = lastAttemptJoinRoomName;
-		string pwd = joinPasswordInput.text;
-		lastAttemptJoinPassword = pwd;
-		joinPasswordModal.SetActive(false);
+		Debug.Log($"👋 Player left room: {otherPlayer.NickName}");
+		UpdatePlayerListInRoomPanel();
+	}
 
-		if (!string.IsNullOrEmpty(roomName))
+	public override void OnRoomListUpdate(List<RoomInfo> roomList)
+	{
+		Debug.Log($"📋 Room list updated - {roomList.Count} rooms");
+		UpdateCachedRoomList(roomList);
+		RefreshRoomListUI();
+	}
+
+	void UpdateCachedRoomList(List<RoomInfo> roomList)
+	{
+		foreach (RoomInfo room in roomList)
 		{
-			UpdateStatusText(UIStatus.JoiningRoom);
-			PhotonNetwork.JoinRoom(roomName);
+			if (room.RemovedFromList)
+			{
+				if (cachedRoomList.ContainsKey(room.Name))
+				{
+					cachedRoomList.Remove(room.Name);
+					Debug.Log($"🗑️ Removed room from cache: {room.Name}");
+				}
+			}
+			else
+			{
+				cachedRoomList[room.Name] = room;
+			}
 		}
 	}
 
 	// ================= UI MANAGEMENT =================
 
+	void SetCreateRoomButtonState(bool enabled)
+	{
+		if (createRoomButtonInLobby == null) return;
+
+		createRoomButtonInLobby.interactable = enabled;
+
+		// Update visual appearance
+		Image buttonImage = createRoomButtonInLobby.GetComponent<Image>();
+		TMP_Text buttonText = createRoomButtonInLobby.GetComponentInChildren<TMP_Text>();
+
+		if (enabled)
+		{
+			// Enabled state
+			if (buttonImage != null)
+			{
+				buttonImage.color = new Color(1f, 1f, 1f, 1f);
+			}
+			if (buttonText != null)
+			{
+				buttonText.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+				buttonText.text = "Create Room";
+			}
+		}
+		else
+		{
+			// Disabled state
+			if (buttonImage != null)
+			{
+				buttonImage.color = new Color(0.6f, 0.6f, 0.6f, 0.7f);
+			}
+			if (buttonText != null)
+			{
+				buttonText.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+				buttonText.text = "Connecting...";
+			}
+		}
+
+		Debug.Log($"🎛️ Create Room button {(enabled ? "ENABLED" : "DISABLED")}");
+	}
+
 	void ClearRoomListUI()
 	{
-		foreach (Transform t in roomListContent)
+		if (roomListContent == null) return;
+
+		foreach (Transform child in roomListContent)
 		{
-			Destroy(t.gameObject);
+			Destroy(child.gameObject);
 		}
-		if (noRoomsText != null) noRoomsText.gameObject.SetActive(true);
+
+		if (noRoomsText != null)
+		{
+			noRoomsText.gameObject.SetActive(true);
+		}
+
+		Debug.Log("🧹 Room list UI cleared");
 	}
 
 	void RefreshRoomListUI()
 	{
-		Debug.Log($"🔄 RefreshRoomListUI - Cached rooms: {cachedRoomList.Count}");
-
 		ClearRoomListUI();
 
 		if (cachedRoomList.Count == 0)
 		{
-			if (noRoomsText != null) noRoomsText.gameObject.SetActive(true);
+			if (noRoomsText != null)
+			{
+				noRoomsText.gameObject.SetActive(true);
+			}
 			return;
 		}
 
-		if (noRoomsText != null) noRoomsText.gameObject.SetActive(false);
+		if (noRoomsText != null)
+		{
+			noRoomsText.gameObject.SetActive(false);
+		}
 
 		// Sort rooms by name
 		var sortedRooms = cachedRoomList.Values.OrderBy(room => room.Name).ToList();
 
-		foreach (RoomInfo info in sortedRooms)
+		foreach (RoomInfo roomInfo in sortedRooms)
 		{
-			Debug.Log($"🏗️ Creating room item for: {info.Name}");
-
-			GameObject roomItemObject = Instantiate(roomItemPrefab, roomListContent);
-			roomItemObject.SetActive(true);
-			roomItemObject.transform.SetAsLastSibling();
-
-			RoomItem roomItem = roomItemObject.GetComponent<RoomItem>();
-			if (roomItem != null)
-			{
-				bool isPrivate = info.CustomProperties != null &&
-							   info.CustomProperties.ContainsKey("isPrivate") &&
-							   (bool)info.CustomProperties["isPrivate"];
-
-				roomItem.Setup(info.Name, info.PlayerCount, info.MaxPlayers, isPrivate, this, info);
-			}
+			CreateRoomListItem(roomInfo);
 		}
 
 		// Force layout rebuild
 		StartCoroutine(RefreshLayoutNextFrame());
+
+		Debug.Log($"🏗️ Room list UI refreshed - {sortedRooms.Count} rooms displayed");
+	}
+
+	void CreateRoomListItem(RoomInfo roomInfo)
+	{
+		if (roomItemPrefab == null || roomListContent == null) return;
+
+		GameObject roomItemObject = Instantiate(roomItemPrefab, roomListContent);
+		roomItemObject.SetActive(true);
+		roomItemObject.transform.SetAsLastSibling();
+
+		RoomItem roomItem = roomItemObject.GetComponent<RoomItem>();
+		if (roomItem != null)
+		{
+			bool isPrivate = IsRoomPrivate(roomInfo);
+			roomItem.Setup(roomInfo.Name, roomInfo.PlayerCount, roomInfo.MaxPlayers, isPrivate, this, roomInfo);
+		}
 	}
 
 	IEnumerator RefreshLayoutNextFrame()
@@ -728,7 +1118,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 			if (rectTransform != null)
 			{
 				LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
-				Debug.Log("✅ Room list layout refreshed");
 			}
 		}
 	}
@@ -738,19 +1127,14 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		if (roomPanelManager == null) return;
 
 		var players = PhotonNetwork.PlayerList;
-		List<string> names = new List<string>();
+		List<string> playerNames = new List<string>();
+
 		foreach (var player in players)
 		{
-			names.Add(player.NickName);
+			playerNames.Add(player.NickName);
 		}
 
-		roomPanelManager.UpdatePlayerList(names, PhotonNetwork.IsMasterClient);
-	}
-
-	public void OnMasterStartGame()
-	{
-		Debug.Log("🎮 Master starting game");
-		PhotonNetwork.LoadLevel("Gameplay");
+		roomPanelManager.UpdatePlayerList(playerNames, PhotonNetwork.IsMasterClient);
 	}
 
 	void SetupRoomListLayout()
@@ -762,10 +1146,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		if (layoutGroup == null)
 		{
 			layoutGroup = roomListContent.gameObject.AddComponent<VerticalLayoutGroup>();
-			Debug.Log("✅ Added VerticalLayoutGroup to RoomListContent");
 		}
 
-		// Configure layout settings
+		// Configure layout
 		layoutGroup.childAlignment = TextAnchor.UpperCenter;
 		layoutGroup.childControlWidth = true;
 		layoutGroup.childControlHeight = false;
@@ -779,55 +1162,43 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 		if (sizeFitter == null)
 		{
 			sizeFitter = roomListContent.gameObject.AddComponent<ContentSizeFitter>();
-			Debug.Log("✅ Added ContentSizeFitter to RoomListContent");
 		}
 
 		sizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 		sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-		Debug.Log("🎯 RoomListContent layout configured");
+		Debug.Log("📐 Room list layout configured");
 	}
 
-	void SetCreateRoomButtonState(bool enabled)
+	// ================= PUBLIC API =================
+
+	public void OnPlayerNameChanged(string newName)
 	{
-		if (createRoomButtonInLobby != null)
-		{
-			createRoomButtonInLobby.interactable = enabled;
+		string finalName = string.IsNullOrEmpty(newName) ? GenerateRandomPlayerName() : newName;
+		PhotonNetwork.NickName = finalName;
+		PlayerPrefs.SetString("playerName", finalName);
+		Debug.Log($"👤 Player name updated: {PhotonNetwork.NickName}");
+	}
 
-			// Update visual appearance
-			Image buttonImage = createRoomButtonInLobby.GetComponent<Image>();
-			TMP_Text buttonText = createRoomButtonInLobby.GetComponentInChildren<TMP_Text>();
+	public void OnMasterStartGame()
+	{
+		Debug.Log("🎮 Master client starting game");
+		PhotonNetwork.LoadLevel("Gameplay");
+	}
 
-			if (enabled)
-			{
-				// Enabled state
-				if (buttonImage != null)
-				{
-					buttonImage.color = new Color(1f, 1f, 1f, 1f);
-				}
-				if (buttonText != null)
-				{
-					buttonText.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-					buttonText.text = "Create Room";
-				}
+	// ================= DEBUG =================
 
-				Debug.Log("✅ Create Room button ENABLED");
-			}
-			else
-			{
-				// Disabled state
-				if (buttonImage != null)
-				{
-					buttonImage.color = new Color(0.6f, 0.6f, 0.6f, 0.7f);
-				}
-				if (buttonText != null)
-				{
-					buttonText.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
-					buttonText.text = "Connecting...";
-				}
+	void OnGUI()
+	{
+		if (!Debug.isDebugBuild) return;
 
-				Debug.Log("❌ Create Room button DISABLED");
-			}
-		}
+		GUILayout.BeginArea(new Rect(10, 10, 300, 200));
+		GUILayout.Label($"Network State: {PhotonNetwork.NetworkClientState}");
+		GUILayout.Label($"Current Status: {currentStatus}");
+		GUILayout.Label($"In Lobby: {PhotonNetwork.InLobby}");
+		GUILayout.Label($"Is Creating Room: {isCreatingRoom}");
+		GUILayout.Label($"Is Processing: {isProcessingRoomOperation}");
+		GUILayout.Label($"Join Attempt Room: '{currentJoinAttemptRoomName}'");
+		GUILayout.EndArea();
 	}
 }
