@@ -1,19 +1,9 @@
 fileFormatVersion: 2
-guid: 39db2e63a3f9115418275c2b40c01ad3
+guid: 741515bce69174346b2a8faa29b5d333
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects:
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Glass
-    second: {fileID: 2100000, guid: 6b5f691dcfc97894f818dc93663e2113, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: ticket_machine
-    second: {fileID: 2100000, guid: 42c816e062044804ebe6fd7ff05aa6d7, type: 2}
+  externalObjects: {}
   materials:
     materialImportMode: 2
     materialName: 0
