@@ -16,11 +16,10 @@ public class StationAnomalyManager : MonoBehaviourPun
 	// Hàm này được gọi khi người chơi "vào" station
 	public void InitializeStation()
 	{
-		/*if (PhotonNetwork.IsMasterClient)
+		if (PhotonNetwork.IsMasterClient)
 		{
 			DecideAnomaly();
-		}*/
-		DecideAnomaly();
+		}
 	}
 
 	void DecideAnomaly()
