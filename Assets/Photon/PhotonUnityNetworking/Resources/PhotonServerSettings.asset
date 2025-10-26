@@ -42,6 +42,9 @@ MonoBehaviour:
   - NotifyPlayerReady
   - UpdatePlayerReady
   - NotifyPlayerKick
+  - BroadcastKickEvent
+  - ForceDisconnectPlayer
+  - SimulateNetworkIssues
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
