@@ -12,6 +12,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: metro_map
+    second: {fileID: 2100000, guid: b90b9287d37c24c4794406fa6dd11101, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: ticket_machine
     second: {fileID: 2100000, guid: 42c816e062044804ebe6fd7ff05aa6d7, type: 2}
   materials:
