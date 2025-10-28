@@ -3,7 +3,7 @@
 public class TrainStartTrigger : MonoBehaviour
 {
 	// Kéo object Tàu (ví dụ: Subway_car) vào đây
-	public TrainController trainController;
+	public SubwayController trainController;
 
 	// Biến này để đảm bảo trigger chỉ chạy 1 lần
 	private bool hasBeenTriggered = false;
@@ -30,9 +30,4 @@ public class TrainStartTrigger : MonoBehaviour
 			}
 		}
 	}
-
-	// (Tùy chọn) Thêm hàm này nếu bạn muốn reset trigger
-	// khi tàu quay về trạng thái Idle, nhưng hiện tại 
-	// script TrainController chưa có cách báo ra ngoài.
-	// Tạm thời chúng ta chỉ cho chạy 1 lần.
 }

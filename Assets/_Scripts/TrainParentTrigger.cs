@@ -65,7 +65,7 @@ public class TrainParentTrigger : MonoBehaviourPun
 			}
 			else
 			{
-				Debug.log($"RPC: Thả player {targetPlayer.name} ra khỏi tàu trên tất cả clients.");
+				Debug.Log($"RPC: Thả player {targetPlayer.name} ra khỏi tàu trên tất cả clients.");
 				targetPlayer.transform.SetParent(null);
 			}
 		}
