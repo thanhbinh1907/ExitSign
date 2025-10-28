@@ -2,6 +2,7 @@
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections.Generic;
+using System.Linq;
 
 public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 {
@@ -46,7 +47,7 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			playersOnTrain[player.ActorNumber] = false;
 		}
 
-		Debug.Log($"Khởi tạo tracking cho {playersOnTrain.Count} players");
+		Debug.Log($"Khởi tạo tracking cho {playersOnTrain.Count} players: [{string.Join(", ", playersOnTrain.Keys)}]");
 	}
 
 	void Update()
@@ -84,8 +85,8 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			if (playerView != null && playerView.IsMine)
 			{
 				playerInRange = true;
-				UpdateUI();
 				Debug.Log("Vào vùng điều khiển tàu.");
+				UpdateUI();
 			}
 		}
 	}
@@ -98,8 +99,8 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			if (playerView != null && playerView.IsMine)
 			{
 				playerInRange = false;
-				HideAllUI();
 				Debug.Log("Rời vùng điều khiển tàu.");
+				HideAllUI();
 			}
 		}
 	}
@@ -118,7 +119,10 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			return;
 		}
 
-		if (AreAllPlayersOnTrain())
+		bool allPlayersOnTrain = AreAllPlayersOnTrain();
+		Debug.Log($"UpdateUI - All players on train: {allPlayersOnTrain}");
+
+		if (allPlayersOnTrain)
 		{
 			if (interactionPrompt != null)
 				interactionPrompt.SetActive(true);
@@ -150,15 +154,18 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 		int totalPlayers = PhotonNetwork.PlayerList.Length;
 		int playersOnTrainCount = 0;
 
+		// Debug chi tiết trạng thái từng player
+		string statusDetails = "Player status: ";
 		foreach (var kvp in playersOnTrain)
 		{
 			if (kvp.Value)
 			{
 				playersOnTrainCount++;
 			}
+			statusDetails += $"[{kvp.Key}:{kvp.Value}] ";
 		}
 
-		Debug.Log($"Players trên tàu: {playersOnTrainCount}/{totalPlayers}");
+		Debug.Log($"{statusDetails}-> {playersOnTrainCount}/{totalPlayers} players on train");
 
 		return playersOnTrainCount >= totalPlayers && totalPlayers > 0;
 	}
@@ -192,19 +199,17 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 		photonView.RPC("OnTrainStarted", RpcTarget.Others);
 	}
 
-	// SỬA: Không gửi RPC nữa vì TrainParentTrigger đã gửi rồi
 	public void OnPlayerBoardingStatusChanged(int playerActorNumber, bool onTrain)
 	{
+		bool wasOnTrain = playersOnTrain.ContainsKey(playerActorNumber) && playersOnTrain[playerActorNumber];
 		playersOnTrain[playerActorNumber] = onTrain;
 
-		Debug.Log($"Player {playerActorNumber} trạng thái trên tàu: {onTrain}");
+		Debug.Log($"BOARDING STATUS CHANGED: Player {playerActorNumber} từ {wasOnTrain} -> {onTrain}");
 
 		if (playerInRange)
 		{
 			UpdateUI();
 		}
-
-		// KHÔNG GỬI RPC NỮA - TrainParentTrigger đã xử lý
 	}
 
 	[PunRPC]
