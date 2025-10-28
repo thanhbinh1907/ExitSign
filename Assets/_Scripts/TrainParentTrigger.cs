@@ -91,19 +91,7 @@ public class TrainParentTrigger : MonoBehaviour
 			if (shouldParent)
 			{
 				Debug.Log($"RPC: Gắn player {targetPlayer.name} vào tàu trên tất cả clients.");
-
-				CharacterController controller = targetPlayer.GetComponent<CharacterController>();
-				if (controller != null)
-				{
-					controller.enabled = false;
-				}
-
 				targetPlayer.transform.SetParent(trainTransform);
-
-				if (controller != null)
-				{
-					controller.enabled = true;
-				}
 
 				if (playerMovement != null)
 				{
@@ -119,18 +107,7 @@ public class TrainParentTrigger : MonoBehaviour
 					playerMovement.SetOnTrain(false);
 				}
 
-				CharacterController controller = targetPlayer.GetComponent<CharacterController>();
-				if (controller != null)
-				{
-					controller.enabled = false;
-				}
-
 				targetPlayer.transform.SetParent(null);
-
-				if (controller != null)
-				{
-					controller.enabled = true;
-				}
 			}
 		}
 		else
