@@ -1,11 +1,10 @@
 ﻿using UnityEngine;
 using Photon.Pun;
 
-// 1. Đổi kế thừa từ MonoBehaviourPun thành MonoBehaviour
 public class TrainParentTrigger : MonoBehaviour
 {
 	private Transform trainTransform;
-	private PhotonView myPhotonView; // 2. Biến mới để lưu PhotonView
+	private PhotonView myPhotonView;
 
 	[Header("Control Button Reference")]
 	public TrainControlButton controlButton;
@@ -14,7 +13,6 @@ public class TrainParentTrigger : MonoBehaviour
 	{
 		trainTransform = transform.root;
 
-		// 3. Tự tìm và lưu PhotonView khi Start
 		myPhotonView = GetComponent<PhotonView>();
 		if (myPhotonView == null)
 		{
@@ -43,7 +41,6 @@ public class TrainParentTrigger : MonoBehaviour
 				int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã LÊN TÀU. Gửi RPC đồng bộ.");
 
-				// 4. Dùng biến 'myPhotonView'
 				if (myPhotonView != null)
 				{
 					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, true);
@@ -67,7 +64,6 @@ public class TrainParentTrigger : MonoBehaviour
 				int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã RỜI TÀU. Gửi RPC đồng bộ.");
 
-				// 4. Dùng biến 'myPhotonView'
 				if (myPhotonView != null)
 				{
 					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, false);
@@ -77,8 +73,6 @@ public class TrainParentTrigger : MonoBehaviour
 		}
 	}
 
-	// --- Các hàm RPC giữ nguyên, không thay đổi ---
-
 	[PunRPC]
 	void SetPlayerParent(int playerViewID, bool shouldParent)
 	{
@@ -87,27 +81,61 @@ public class TrainParentTrigger : MonoBehaviour
 		if (targetPlayer != null)
 		{
 			PlayerMovement playerMovement = targetPlayer.GetComponent<PlayerMovement>();
+			CharacterController controller = targetPlayer.GetComponent<CharacterController>();
 
 			if (shouldParent)
 			{
 				Debug.Log($"RPC: Gắn player {targetPlayer.name} vào tàu trên tất cả clients.");
+
+				// 🔥 QUAN TRỌNG: Tắt CharacterController trước khi parent
+				if (controller != null)
+				{
+					controller.enabled = false;
+					Debug.Log($"Đã TẮT CharacterController của {targetPlayer.name}");
+				}
+
+				// Parent vào tàu
 				targetPlayer.transform.SetParent(trainTransform);
 
+				// Thông báo cho PlayerMovement
 				if (playerMovement != null)
 				{
 					playerMovement.SetOnTrain(true);
+				}
+
+				// 🔥 BẬT LẠI CharacterController sau khi parent (quan trọng!)
+				if (controller != null)
+				{
+					controller.enabled = true;
+					Debug.Log($"Đã BẬT lại CharacterController của {targetPlayer.name}");
 				}
 			}
 			else
 			{
 				Debug.Log($"RPC: Thả player {targetPlayer.name} ra khỏi tàu trên tất cả clients.");
 
+				// Thông báo cho PlayerMovement
 				if (playerMovement != null)
 				{
 					playerMovement.SetOnTrain(false);
 				}
 
+				// 🔥 Tắt CharacterController trước khi unparent
+				if (controller != null)
+				{
+					controller.enabled = false;
+					Debug.Log($"Đã TẮT CharacterController trước khi unparent {targetPlayer.name}");
+				}
+
+				// Unparent
 				targetPlayer.transform.SetParent(null);
+
+				// 🔥 Bật lại CharacterController
+				if (controller != null)
+				{
+					controller.enabled = true;
+					Debug.Log($"Đã BẬT lại CharacterController của {targetPlayer.name}");
+				}
 			}
 		}
 		else
@@ -129,7 +157,6 @@ public class TrainParentTrigger : MonoBehaviour
 		else
 		{
 			Debug.LogError("Control button không tìm thấy!");
-			// Thử tìm lại control button
 			controlButton = FindObjectOfType<TrainControlButton>();
 			if (controlButton != null)
 			{

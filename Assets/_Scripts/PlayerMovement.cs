@@ -120,6 +120,13 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	// Hàm xử lý di chuyển bằng bàn phím (có điều chỉnh cho train movement)
 	void HandleMovement()
 	{
+		// 🔥 Kiểm tra CharacterController có enabled không
+		if (!controller.enabled)
+		{
+			Debug.LogWarning($"CharacterController bị disabled trên {name}!");
+			return;
+		}
+
 		if (controller.isGrounded && playerVelocity.y < 0)
 		{
 			playerVelocity.y = -2f;
@@ -154,27 +161,21 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		Vector3 move = transform.right * x + transform.forward * z;
 		float currentSpeed = isRunning ? runSpeed : walkSpeed;
 
-		// QUAN TRỌNG: Nếu đang ở trên tàu, thêm train velocity
-		if (isOnTrain && transform.parent != null)
+		// 🔥 QUAN TRỌNG: Khi ở trên tàu, không cần cộng thêm train velocity
+		// Vì đã là child của tàu rồi, Unity sẽ tự động di chuyển theo tàu
+		if (isOnTrain)
 		{
-			// Thêm chuyển động của tàu vào movement của player
-			Vector3 trainMovement = trainVelocity * Time.deltaTime;
-			controller.Move(move.normalized * currentSpeed * Time.deltaTime + trainMovement);
+			// Chỉ cần di chuyển relative với tàu
+			controller.Move(move.normalized * currentSpeed * Time.deltaTime);
+
+			// Giảm gravity khi ở trên tàu để tránh rơi xuống
+			playerVelocity.y += (gravity * 0.5f) * Time.deltaTime;
 		}
 		else
 		{
 			// Di chuyển bình thường khi không ở trên tàu
 			controller.Move(move.normalized * currentSpeed * Time.deltaTime);
-		}
 
-		// Áp dụng gravity
-		if (isOnTrain)
-		{
-			// Giảm gravity khi ở trên tàu để tránh rơi xuống
-			playerVelocity.y += (gravity * 0.3f) * Time.deltaTime;
-		}
-		else
-		{
 			// Gravity bình thường
 			playerVelocity.y += gravity * Time.deltaTime;
 		}
