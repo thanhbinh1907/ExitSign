@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using Photon.Pun; // Cần thư viện Photon
 
-public class TrainParentTrigger : MonoBehaviour
+public class TrainParentTrigger : MonoBehaviourPun
 {
 	// Biến này để lưu transform của object Tàu (cấp cao nhất)
 	private Transform trainTransform;
@@ -20,14 +20,13 @@ public class TrainParentTrigger : MonoBehaviour
 			// 2. Lấy PhotonView của Player
 			PhotonView playerView = other.GetComponent<PhotonView>();
 
-			// 3. QUAN TRỌNG: Chỉ "gắn" (parent)
-			// NẾU ĐÓ LÀ NHÂN VẬT CỦA CHÍNH MÌNH
+			// 3. QUAN TRỌNG: Chỉ gửi RPC nếu đây là nhân vật của chính mình
 			if (playerView != null && playerView.IsMine)
 			{
-				Debug.Log("Người chơi (Local) đã LÊN TÀU. Gắn vào tàu.");
+				Debug.Log($"Người chơi (Local) đã LÊN TÀU. Gửi RPC để đồng bộ - ViewID: {playerView.ViewID}");
 
-				// Gắn transform của Player làm "con" của Tàu
-				other.transform.SetParent(trainTransform);
+				// Gửi RPC đến tất cả clients (bao gồm cả bản thân) để gắn player vào tàu
+				photonView.RPC("RPC_SetPlayerParent", RpcTarget.AllBuffered, playerView.ViewID, true);
 			}
 		}
 	}
@@ -40,15 +39,41 @@ public class TrainParentTrigger : MonoBehaviour
 			// 2. Lấy PhotonView
 			PhotonView playerView = other.GetComponent<PhotonView>();
 
-			// 3. QUAN TRỌNG: Chỉ "thả" (un-parent)
-			// NẾU ĐÓ LÀ NHÂN VẬT CỦA CHÍNH MÌNH
+			// 3. QUAN TRỌNG: Chỉ gửi RPC nếu đây là nhân vật của chính mình
 			if (playerView != null && playerView.IsMine)
 			{
-				Debug.Log("Người chơi (Local) đã RỜI TÀU. Thả ra.");
+				Debug.Log($"Người chơi (Local) đã RỜI TÀU. Gửi RPC để đồng bộ - ViewID: {playerView.ViewID}");
 
-				// Thả Player ra (không còn là "con" của ai cả)
-				other.transform.SetParent(null);
+				// Gửi RPC đến tất cả clients (bao gồm cả bản thân) để thả player ra khỏi tàu
+				photonView.RPC("RPC_SetPlayerParent", RpcTarget.AllBuffered, playerView.ViewID, false);
 			}
+		}
+	}
+
+	// RPC method to synchronize player parenting across all clients
+	[PunRPC]
+	void RPC_SetPlayerParent(int playerViewID, bool setParent)
+	{
+		// Tìm PhotonView của player dựa trên ViewID
+		PhotonView playerView = PhotonView.Find(playerViewID);
+		
+		if (playerView == null)
+		{
+			Debug.LogWarning($"❌ Không tìm thấy PhotonView với ViewID: {playerViewID}");
+			return;
+		}
+
+		if (setParent)
+		{
+			// Gắn player vào tàu
+			Debug.Log($"✅ RPC nhận được: Gắn player '{playerView.Owner.NickName}' vào tàu (ViewID: {playerViewID})");
+			playerView.transform.SetParent(trainTransform);
+		}
+		else
+		{
+			// Thả player ra khỏi tàu
+			Debug.Log($"✅ RPC nhận được: Thả player '{playerView.Owner.NickName}' ra khỏi tàu (ViewID: {playerViewID})");
+			playerView.transform.SetParent(null);
 		}
 	}
 }
