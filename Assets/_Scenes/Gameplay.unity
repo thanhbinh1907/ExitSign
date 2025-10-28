@@ -256,6 +256,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: -90
       objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 5c33125fdce078a4da1bee5340132cdd, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 167663b24acc65f4a805b3e45d210268, type: 2}
     - target: {fileID: 919132149155446097, guid: 5c33125fdce078a4da1bee5340132cdd, type: 3}
       propertyPath: m_Name
       value: Water_dispenser
@@ -268,6 +272,11 @@ PrefabInstance:
 --- !u!4 &13720616 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 5c33125fdce078a4da1bee5340132cdd, type: 3}
+  m_PrefabInstance: {fileID: 13720615}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &13720617 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: 5c33125fdce078a4da1bee5340132cdd, type: 3}
   m_PrefabInstance: {fileID: 13720615}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &37537802
@@ -1638,13 +1647,13 @@ Transform:
   m_GameObject: {fileID: 324779974}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -4.5030203, y: -3.60987, z: -14.97418}
+  m_LocalPosition: {x: -2.2617002, y: -2.75172, z: -13.548109}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 13720616}
   - {fileID: 1647852744}
-  m_Father: {fileID: 811030906}
+  m_Father: {fileID: 1142945281}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &334927467
 GameObject:
@@ -4568,7 +4577,6 @@ Transform:
   - {fileID: 543450651879567213}
   - {fileID: 2144732977}
   - {fileID: 1492065915}
-  - {fileID: 324779975}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &812735816
@@ -6389,6 +6397,60 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 5bc307433d7b94f49944b576da804ba4, type: 3}
   m_PrefabInstance: {fileID: 367207041}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1142945279
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1142945281}
+  - component: {fileID: 1142945280}
+  m_Layer: 0
+  m_Name: BloodDIspenser
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1142945280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1142945279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8251e3b71e1c6154eac6573211a5e324, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChangePosterAnomaly
+  postersToSwap:
+  - posterRenderer: {fileID: 13720617}
+    materialIndex: 0
+    normalMaterial: {fileID: 2100000, guid: 167663b24acc65f4a805b3e45d210268, type: 2}
+    anomalyMaterial: {fileID: 2100000, guid: 0009230a7ed7b344b867a4c0e0b8f003, type: 2}
+  - posterRenderer: {fileID: 1647852745}
+    materialIndex: 0
+    normalMaterial: {fileID: 2100000, guid: 167663b24acc65f4a805b3e45d210268, type: 2}
+    anomalyMaterial: {fileID: 2100000, guid: 545681a5bc5863644b02928632c714bc, type: 2}
+--- !u!4 &1142945281
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1142945279}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 324779975}
+  m_Father: {fileID: 1372390084}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1145381462
 GameObject:
   m_ObjectHideFlags: 0
@@ -6679,6 +6741,52 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1166233605}
   m_Mesh: {fileID: 4450178516254520572, guid: f6cb661ec7525af4b9fe1a16b24d2fce, type: 3}
+--- !u!1 &1169262342
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1169262343}
+  - component: {fileID: 1169262344}
+  m_Layer: 0
+  m_Name: NonPlayerCamera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1169262343
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169262342}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1372390084}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1169262344
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169262342}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bc64440877dc0e4a8ee7d059c4b28a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  securityCamera: {fileID: 1537223655}
+  playerLayerName: LocalPlayerBody
 --- !u!1001 &1170841568
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7756,6 +7864,8 @@ Transform:
   - {fileID: 1656590480}
   - {fileID: 6271061144226194220}
   - {fileID: 142265954}
+  - {fileID: 1142945281}
+  - {fileID: 1169262343}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1386897821
@@ -7967,7 +8077,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   allAnomalies:
-  - {fileID: 142265955}
+  - {fileID: 1169262344}
   isStationNormal: 1
 --- !u!4 &1410201255
 Transform:
@@ -8640,7 +8750,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 75
   orthographic: 0
   orthographic size: 5
   m_Depth: 0
@@ -9253,6 +9363,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: -90
       objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 5c33125fdce078a4da1bee5340132cdd, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 167663b24acc65f4a805b3e45d210268, type: 2}
     - target: {fileID: 919132149155446097, guid: 5c33125fdce078a4da1bee5340132cdd, type: 3}
       propertyPath: m_Name
       value: Water_dispenser (1)
@@ -9265,6 +9379,11 @@ PrefabInstance:
 --- !u!4 &1647852744 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 5c33125fdce078a4da1bee5340132cdd, type: 3}
+  m_PrefabInstance: {fileID: 1647852743}
+  m_PrefabAsset: {fileID: 0}
+--- !u!23 &1647852745 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: 5c33125fdce078a4da1bee5340132cdd, type: 3}
   m_PrefabInstance: {fileID: 1647852743}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1653402448
@@ -11403,6 +11522,10 @@ PrefabInstance:
     - target: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
       propertyPath: m_TagString
