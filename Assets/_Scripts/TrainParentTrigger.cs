@@ -1,9 +1,11 @@
 ﻿using UnityEngine;
 using Photon.Pun;
 
-public class TrainParentTrigger : MonoBehaviourPun
+// 1. Đổi kế thừa từ MonoBehaviourPun thành MonoBehaviour
+public class TrainParentTrigger : MonoBehaviour
 {
 	private Transform trainTransform;
+	private PhotonView myPhotonView; // 2. Biến mới để lưu PhotonView
 
 	[Header("Control Button Reference")]
 	public TrainControlButton controlButton;
@@ -11,6 +13,13 @@ public class TrainParentTrigger : MonoBehaviourPun
 	void Start()
 	{
 		trainTransform = transform.root;
+
+		// 3. Tự tìm và lưu PhotonView khi Start
+		myPhotonView = GetComponent<PhotonView>();
+		if (myPhotonView == null)
+		{
+			Debug.LogError("TrainParentTrigger BỊ LỖI: Không tìm thấy PhotonView component trên object này!");
+		}
 
 		if (controlButton == null)
 		{
@@ -34,11 +43,12 @@ public class TrainParentTrigger : MonoBehaviourPun
 				int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã LÊN TÀU. Gửi RPC đồng bộ.");
 
-				// Gửi RPC để set parent trước
-				photonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, true);
-
-				// Gửi RPC để cập nhật trạng thái boarding trên TẤT CẢ clients
-				photonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, actorNumber, true);
+				// 4. Dùng biến 'myPhotonView'
+				if (myPhotonView != null)
+				{
+					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, true);
+					myPhotonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, actorNumber, true);
+				}
 			}
 		}
 	}
@@ -57,14 +67,17 @@ public class TrainParentTrigger : MonoBehaviourPun
 				int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã RỜI TÀU. Gửi RPC đồng bộ.");
 
-				// Gửi RPC để unparent trước
-				photonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, false);
-
-				// Gửi RPC để cập nhật trạng thái boarding trên TẤT CẢ clients
-				photonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, actorNumber, false);
+				// 4. Dùng biến 'myPhotonView'
+				if (myPhotonView != null)
+				{
+					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, false);
+					myPhotonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, actorNumber, false);
+				}
 			}
 		}
 	}
+
+	// --- Các hàm RPC giữ nguyên, không thay đổi ---
 
 	[PunRPC]
 	void SetPlayerParent(int playerViewID, bool shouldParent)
