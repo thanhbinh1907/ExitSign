@@ -31,7 +31,7 @@ public class TrainParentTrigger : MonoBehaviourPun
 				// Gửi RPC để set parent trước
 				photonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, true);
 
-				// SỬA: Gửi RPC để cập nhật trạng thái boarding trên TẤT CẢ clients
+				// Gửi RPC để cập nhật trạng thái boarding trên TẤT CẢ clients
 				photonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, PhotonNetwork.LocalPlayer.ActorNumber, true);
 			}
 		}
@@ -50,7 +50,7 @@ public class TrainParentTrigger : MonoBehaviourPun
 				// Gửi RPC để unparent trước
 				photonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, false);
 
-				// SỬA: Gửi RPC để cập nhật trạng thái boarding trên TẤT CẢ clients
+				// Gửi RPC để cập nhật trạng thái boarding trên TẤT CẢ clients
 				photonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, PhotonNetwork.LocalPlayer.ActorNumber, false);
 			}
 		}
@@ -64,24 +64,28 @@ public class TrainParentTrigger : MonoBehaviourPun
 		if (targetPlayer != null)
 		{
 			PlayerMovement playerMovement = targetPlayer.GetComponent<PlayerMovement>();
+			CharacterController controller = targetPlayer.GetComponent<CharacterController>();
 
 			if (shouldParent)
 			{
 				Debug.Log($"RPC: Gắn player {targetPlayer.name} vào tàu trên tất cả clients.");
 
-				CharacterController controller = targetPlayer.GetComponent<CharacterController>();
+				// Tắt controller trước khi parenting
 				if (controller != null)
 				{
 					controller.enabled = false;
 				}
 
+				// Set parent
 				targetPlayer.transform.SetParent(trainTransform);
 
+				// Bật lại controller
 				if (controller != null)
 				{
 					controller.enabled = true;
 				}
 
+				// Thông báo PlayerMovement
 				if (playerMovement != null)
 				{
 					playerMovement.SetOnTrain(true);
@@ -91,22 +95,33 @@ public class TrainParentTrigger : MonoBehaviourPun
 			{
 				Debug.Log($"RPC: Thả player {targetPlayer.name} ra khỏi tàu trên tất cả clients.");
 
+				// 🔥 FIX: Thông báo PlayerMovement TRƯỚC
 				if (playerMovement != null)
 				{
 					playerMovement.SetOnTrain(false);
 				}
 
-				CharacterController controller = targetPlayer.GetComponent<CharacterController>();
+				// 🔥 FIX: Tắt controller TRƯỚC khi unparent
 				if (controller != null)
 				{
 					controller.enabled = false;
 				}
 
+				// 🔥 FIX: Lưu vị trí world trước khi unparent
+				Vector3 worldPosition = targetPlayer.transform.position;
+				Quaternion worldRotation = targetPlayer.transform.rotation;
+
+				// Unparent
 				targetPlayer.transform.SetParent(null);
 
-				if (controller != null)
+				// 🔥 FIX: Đảm bảo vị trí không bị thay đổi
+				targetPlayer.transform.position = worldPosition;
+				targetPlayer.transform.rotation = worldRotation;
+
+				// 🔥 FIX: Chờ 1 frame rồi bật lại controller
+				if (targetPlayer.GetComponent<MonoBehaviour>() != null)
 				{
-					controller.enabled = true;
+					targetPlayer.GetComponent<MonoBehaviour>().StartCoroutine(EnableControllerAfterFrame(controller));
 				}
 			}
 		}
@@ -116,7 +131,19 @@ public class TrainParentTrigger : MonoBehaviourPun
 		}
 	}
 
-	// RPC MỚI: Cập nhật trạng thái boarding trên tất cả clients
+	// 🔥 NEW: Coroutine để enable controller sau 1 frame
+	private System.Collections.IEnumerator EnableControllerAfterFrame(CharacterController controller)
+	{
+		yield return new WaitForEndOfFrame();
+
+		if (controller != null)
+		{
+			controller.enabled = true;
+			Debug.Log($"✅ CharacterController đã được bật lại sau unparent.");
+		}
+	}
+
+	// RPC: Cập nhật trạng thái boarding trên tất cả clients
 	[PunRPC]
 	void UpdatePlayerBoardingStatus(int playerActorNumber, bool onTrain)
 	{
