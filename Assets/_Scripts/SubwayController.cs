@@ -117,23 +117,48 @@ public class SubwayController : MonoBehaviourPun
 		currentState = TrainState.MovingForward;
 	}
 
+	// --- HÀM ĐÃ ĐƯỢC CẬP NHẬT ---
 	[PunRPC]
 	void TeleportAndReturnRPC()
 	{
 		Debug.Log("RPC: Tàu teleport và quay về.");
 
-		// Teleport tàu về vị trí teleportTarget (nếu có)
+		// 1. Lưu vị trí cũ của tàu
+		Vector3 oldTrainPosition = transform.position;
+
+		// 2. Xác định vị trí mới
+		Vector3 newTrainPosition;
 		if (teleportTarget != null)
 		{
-			transform.position = teleportTarget.position;
+			newTrainPosition = teleportTarget.position;
 		}
 		else
 		{
 			// Nếu không có teleportTarget, teleport về startPosition
-			transform.position = startPosition;
+			newTrainPosition = startPosition;
 		}
 
-		// Đặt trạng thái về Returning để tàu tự động di chuyển về ga
+		// 3. Tính toán khoảng cách dịch chuyển (offset)
+		Vector3 teleportOffset = newTrainPosition - oldTrainPosition;
+
+		// 4. Dịch chuyển tàu
+		transform.position = newTrainPosition;
+
+		// 5. Đặt trạng thái về Returning
 		currentState = TrainState.Returning;
+
+		// 6. Tìm và dịch chuyển TẤT CẢ người chơi đang ở trên tàu
+		// (Hàm này chạy trên TẤT CẢ các client)
+		PlayerMovement[] allPlayers = FindObjectsOfType<PlayerMovement>();
+		foreach (PlayerMovement player in allPlayers)
+		{
+			// Kiểm tra xem player có đang ở trên tàu NÀY không
+			if (player.IsOnTrain() && player.GetTrainTransformRef() == this.transform)
+			{
+				// Gọi hàm teleport trên script của player
+				// (Hàm này sẽ tự kiểm tra "IsMine" bên trong)
+				player.TeleportPlayer(teleportOffset);
+			}
+		}
 	}
 }

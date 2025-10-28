@@ -248,4 +248,51 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		}
 	}
 
+	// --- THÊM 3 HÀM SAU ĐÂY VÀO CUỐI FILE ---
+
+	// Hàm này dùng để SubwayController kiểm tra
+	public bool IsOnTrain()
+	{
+		return isOnTrain;
+	}
+
+	// Hàm này dùng để SubwayController kiểm tra
+	public Transform GetTrainTransformRef()
+	{
+		return trainTransformRef;
+	}
+
+	// Hàm này dịch chuyển người chơi bằng CharacterController
+	public void TeleportPlayer(Vector3 offset)
+	{
+		// Chỉ client của chính mình mới có quyền di chuyển controller
+		if (photonView.IsMine)
+		{
+			Debug.Log($"TeleportPlayer được gọi. Di chuyển bằng offset: {offset}");
+
+			// Tắt CharacterController để dịch chuyển
+			if (controller != null)
+			{
+				controller.enabled = false;
+			}
+
+			// Di chuyển transform
+			transform.position += offset;
+
+			// Bật lại CharacterController
+			if (controller != null)
+			{
+				controller.enabled = true;
+			}
+
+			// CẬP NHẬT QUAN TRỌNG:
+			// Đặt lại lastTrainPosition về vị trí MỚI của tàu
+			// để frame sau không bị tính velocity sai
+			if (isOnTrain && trainTransformRef != null)
+			{
+				lastTrainPosition = trainTransformRef.position;
+				trainVelocity = Vector3.zero; // Reset vận tốc
+			}
+		}
+	}
 }
