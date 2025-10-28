@@ -24,11 +24,8 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 	void Start()
 	{
-		if (interactionPrompt != null)
-			interactionPrompt.SetActive(false);
-
-		if (waitingPrompt != null)
-			waitingPrompt.SetActive(false);
+		// ĐẢM BẢO TẤT CẢ UI ĐỀU ẨN TỪ ĐẦU
+		HideAllUI();
 
 		InitializePlayerTracking();
 
@@ -59,9 +56,32 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 	void Update()
 	{
+		// Kiểm tra trạng thái tàu để reset trainStarted
+		CheckTrainStatus();
+
 		if (playerInRange && Input.GetKeyDown(interactionKey))
 		{
 			TryStartTrain();
+		}
+	}
+
+	// HÀM MỚI: Kiểm tra trạng thái tàu để reset button
+	void CheckTrainStatus()
+	{
+		if (trainController != null && trainStarted)
+		{
+			// Nếu tàu đã về trạng thái Idle, cho phép khởi động lại
+			if (trainController.GetCurrentState() == SubwayController.TrainState.Idle)
+			{
+				trainStarted = false;
+				Debug.Log("Tàu đã về ga. Button có thể sử dụng lại.");
+
+				// Cập nhật UI nếu player đang trong vùng
+				if (playerInRange)
+				{
+					UpdateUI();
+				}
+			}
 		}
 	}
 
@@ -73,7 +93,7 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			if (playerView != null && playerView.IsMine)
 			{
 				playerInRange = true;
-				UpdateUI();
+				UpdateUI(); // CHỈ HIỆN UI KHI VÀO VÙNG
 				Debug.Log("Vào vùng điều khiển tàu.");
 			}
 		}
@@ -87,7 +107,7 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			if (playerView != null && playerView.IsMine)
 			{
 				playerInRange = false;
-				HideAllUI();
+				HideAllUI(); // ẨN UI KHI RỜI VÙNG
 				Debug.Log("Rời vùng điều khiển tàu.");
 			}
 		}
@@ -95,18 +115,21 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 	void UpdateUI()
 	{
-		if (trainStarted)
-		{
-			HideAllUI();
-			return;
-		}
-
+		// CHỈ HIỆN UI NẾU PLAYER ĐANG TRONG VÙNG
 		if (!playerInRange)
 		{
 			HideAllUI();
 			return;
 		}
 
+		// Nếu tàu đang chạy, ẩn UI
+		if (trainController != null && trainController.GetCurrentState() != SubwayController.TrainState.Idle)
+		{
+			HideAllUI();
+			return;
+		}
+
+		// Kiểm tra điều kiện hiển thị UI
 		if (AreAllPlayersOnTrain())
 		{
 			if (interactionPrompt != null)
@@ -154,15 +177,16 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 	void TryStartTrain()
 	{
-		if (trainStarted)
-		{
-			Debug.Log("Tàu đã được khởi động rồi!");
-			return;
-		}
-
 		if (trainController == null)
 		{
 			Debug.LogError("Chưa gán TrainController!");
+			return;
+		}
+
+		// SỬA: Kiểm tra trạng thái tàu thay vì trainStarted
+		if (trainController.GetCurrentState() != SubwayController.TrainState.Idle)
+		{
+			Debug.Log("Tàu đang hoạt động, không thể khởi động!");
 			return;
 		}
 
@@ -225,20 +249,9 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 	}
 
 	// Implementation của IMatchmakingCallbacks
-	public void OnFriendListUpdate(List<FriendInfo> friendList)
-	{
-		// Not needed for this use case
-	}
-
-	public void OnCreatedRoom()
-	{
-		// Not needed for this use case
-	}
-
-	public void OnCreateRoomFailed(short returnCode, string message)
-	{
-		// Not needed for this use case
-	}
+	public void OnFriendListUpdate(List<FriendInfo> friendList) { }
+	public void OnCreatedRoom() { }
+	public void OnCreateRoomFailed(short returnCode, string message) { }
 
 	public void OnJoinedRoom()
 	{
@@ -249,27 +262,19 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			UpdateUI();
 	}
 
-	public void OnJoinRoomFailed(short returnCode, string message)
-	{
-		// Not needed for this use case
-	}
-
-	public void OnJoinRandomFailed(short returnCode, string message)
-	{
-		// Not needed for this use case
-	}
+	public void OnJoinRoomFailed(short returnCode, string message) { }
+	public void OnJoinRandomFailed(short returnCode, string message) { }
 
 	public void OnLeftRoom()
 	{
 		Debug.Log("Left room");
 		playersOnTrain.Clear();
+		HideAllUI();
 	}
 
 	public void OnPlayerEnteredRoom(Player newPlayer)
 	{
 		Debug.Log($"Player {newPlayer.ActorNumber} joined room");
-
-		// Thêm player mới vào tracking
 		playersOnTrain[newPlayer.ActorNumber] = false;
 
 		if (playerInRange)
@@ -280,7 +285,6 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 	{
 		Debug.Log($"Player {otherPlayer.ActorNumber} left room");
 
-		// Xóa player khỏi tracking
 		if (playersOnTrain.ContainsKey(otherPlayer.ActorNumber))
 		{
 			playersOnTrain.Remove(otherPlayer.ActorNumber);
@@ -290,23 +294,11 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			UpdateUI();
 	}
 
-	public void OnRoomListUpdate(List<RoomInfo> roomList)
-	{
-		// Not needed for this use case
-	}
-
-	public void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
-	{
-		// Not needed for this use case
-	}
-
+	public void OnRoomListUpdate(List<RoomInfo> roomList) { }
+	public void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps) { }
 	public void OnMasterClientSwitched(Player newMasterClient)
 	{
 		Debug.Log($"Master client switched to {newMasterClient.ActorNumber}");
 	}
-
-	public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
-	{
-		// Not needed for this use case
-	}
+	public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged) { }
 }

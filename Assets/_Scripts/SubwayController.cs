@@ -28,10 +28,16 @@ public class SubwayController : MonoBehaviourPun
 	private Vector3 startPosition; // Vị trí ban đầu của tàu
 	private TrainState currentState = TrainState.Idle;
 
+	// Reference đến TrainControlButton để reset khi cần
+	private TrainControlButton controlButton;
+
 	void Start()
 	{
 		// Lưu lại vị trí ban đầu khi game bắt đầu
 		startPosition = transform.position;
+
+		// Tìm control button
+		controlButton = FindObjectOfType<TrainControlButton>();
 	}
 
 	void Update()
@@ -54,6 +60,12 @@ public class SubwayController : MonoBehaviourPun
 			{
 				currentState = TrainState.Idle;
 				Debug.Log("Tàu đã về ga và dừng lại.");
+
+				// THÔNG BÁO CHO CONTROL BUTTON RESET
+				if (controlButton != null)
+				{
+					controlButton.ResetButton();
+				}
 			}
 		}
 	}
