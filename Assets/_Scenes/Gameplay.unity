@@ -3116,8 +3116,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   trainController: {fileID: 897823268600606368}
-  interactionPrompt: {fileID: 98645349}
-  waitingPrompt: {fileID: 1968697965}
+  interactionPrompt: {fileID: 213472582}
+  waitingPrompt: {fileID: 1780106573}
   interactionKey: 101
   trainParentTrigger: {fileID: 1613853666}
 --- !u!64 &397348247
@@ -3161,8 +3161,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 6.8679757, y: 0.71780664, z: 4.437547}
-  m_Center: {x: -0.049731392, y: 0.1410974, z: 0.06928291}
+  m_Size: {x: 6.8679757, y: 6.944888, z: 7.133758}
+  m_Center: {x: -0.049731392, y: 3.2546384, z: -1.2788221}
 --- !u!1 &401396418
 GameObject:
   m_ObjectHideFlags: 0
