@@ -10,6 +10,12 @@ public class TrainParentTrigger : MonoBehaviourPun
 	{
 		// Tự động tìm object cha cao nhất (là cái Tàu)
 		trainTransform = transform.root;
+		
+		// Kiểm tra xem TrainParentTrigger có PhotonView không
+		if (photonView == null)
+		{
+			Debug.LogError("❌ TrainParentTrigger cần có PhotonView component để đồng bộ parenting!");
+		}
 	}
 
 	private void OnTriggerEnter(Collider other)
@@ -23,6 +29,13 @@ public class TrainParentTrigger : MonoBehaviourPun
 			// 3. QUAN TRỌNG: Chỉ gửi RPC nếu đây là nhân vật của chính mình
 			if (playerView != null && playerView.IsMine)
 			{
+				// Kiểm tra photonView trước khi gửi RPC
+				if (photonView == null)
+				{
+					Debug.LogError("❌ Không thể gửi RPC: TrainParentTrigger không có PhotonView!");
+					return;
+				}
+				
 				Debug.Log($"Người chơi (Local) đã LÊN TÀU. Gửi RPC để đồng bộ - ViewID: {playerView.ViewID}");
 
 				// Gửi RPC đến tất cả clients (bao gồm cả bản thân) để gắn player vào tàu
@@ -42,6 +55,13 @@ public class TrainParentTrigger : MonoBehaviourPun
 			// 3. QUAN TRỌNG: Chỉ gửi RPC nếu đây là nhân vật của chính mình
 			if (playerView != null && playerView.IsMine)
 			{
+				// Kiểm tra photonView trước khi gửi RPC
+				if (photonView == null)
+				{
+					Debug.LogError("❌ Không thể gửi RPC: TrainParentTrigger không có PhotonView!");
+					return;
+				}
+				
 				Debug.Log($"Người chơi (Local) đã RỜI TÀU. Gửi RPC để đồng bộ - ViewID: {playerView.ViewID}");
 
 				// Gửi RPC đến tất cả clients (bao gồm cả bản thân) để thả player ra khỏi tàu
