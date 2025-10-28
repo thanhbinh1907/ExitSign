@@ -1876,7 +1876,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4165d7474c4d5447bbbf21b53628433, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  trainController: {fileID: 0}
+  trainController: {fileID: 897823268600606368}
 --- !u!65 &318690616
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1963,7 +1963,7 @@ Transform:
   m_GameObject: {fileID: 318690614}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 7.948, y: 1.39688, z: 5.45}
+  m_LocalPosition: {x: 7.948, y: 2.266, z: 5.45}
   m_LocalScale: {x: 1.9730569, y: 1, z: 1.5868}
   m_ConstrainProportionsScale: 0
   m_Children: []
