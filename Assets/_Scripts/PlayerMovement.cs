@@ -215,4 +215,5 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			SetLayerRecursively(child.gameObject, newLayer);
 		}
 	}
+
 }
