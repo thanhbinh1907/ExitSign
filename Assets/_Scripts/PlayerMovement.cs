@@ -84,7 +84,42 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		if (isOnTrain && transform.parent != null)
 		{
 			Vector3 currentTrainPosition = transform.parent.position;
-			trainVelocity = (currentTrainPosition - lastTrainPosition) / Time.deltaTime;
+			Vector3 delta = currentTrainPosition - lastTrainPosition; // Tính khoảng cách tàu di chuyển
+
+			// KIỂM TRA TELEPORT: 
+			// Nếu tàu di chuyển hơn 20 mét TRONG 1 FRAME (delta.sqrMagnitude > 20*20)
+			// -> Đây chắc chắn là một cú teleport, không phải di chuyển thường.
+			if (delta.sqrMagnitude > 400f && photonView.IsMine && controller.enabled)
+			{
+				// ---- BƯỚC XỬ LÝ TELEPORT ----
+				// 1. Tạm thời TẮT CharacterController
+				controller.enabled = false;
+
+				// 2. Di chuyển transform của Player đi một khoảng bằng đúng delta
+				transform.position += delta;
+
+				// 3. BẬT lại CharacterController
+				controller.enabled = true;
+
+				// 4. Đặt vận tốc tàu bằng 0 cho frame này
+				// (vì chúng ta đã tự di chuyển player rồi)
+				trainVelocity = Vector3.zero;
+			}
+			else
+			{
+				// ---- XỬ LÝ DI CHUYỂN THƯỜNG (mượt) ----
+				// Nếu Time.deltaTime rất nhỏ hoặc bằng 0, không chia
+				if (Time.deltaTime > float.Epsilon)
+				{
+					trainVelocity = delta / Time.deltaTime;
+				}
+				else
+				{
+					trainVelocity = Vector3.zero;
+				}
+			}
+
+			// Luôn cập nhật vị trí cuối cùng
 			lastTrainPosition = currentTrainPosition;
 		}
 
