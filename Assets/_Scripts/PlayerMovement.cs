@@ -24,6 +24,10 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	private bool isWalking = false;
 	private bool isRunning = false;
 
+	// Thêm biến để theo dõi trạng thái parenting
+	private bool isParented = false;
+	private Transform previousParent = null;
+
 	void Start()
 	{
 		controller = GetComponent<CharacterController>();
@@ -72,6 +76,9 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 
 	void Update()
 	{
+		// Kiểm tra thay đổi parenting
+		CheckParentingChange();
+
 		// 4. DÒNG CODE QUAN TRỌNG NHẤT
 		// Chỉ chạy code di chuyển, xoay camera, và cập nhật animation
 		// NẾU ĐÂY LÀ NHÂN VẬT CỦA TÔI
@@ -87,7 +94,35 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		// Animation sẽ do PhotonAnimatorView lo.
 	}
 
-	// Hàm xử lý di chuyển bằng bàn phím (không thay đổi)
+	// Hàm mới: Kiểm tra thay đổi parenting
+	void CheckParentingChange()
+	{
+		bool currentlyParented = (transform.parent != null);
+
+		if (currentlyParented != isParented)
+		{
+			isParented = currentlyParented;
+
+			if (photonView.IsMine)
+			{
+				// Khi parenting thay đổi, điều chỉnh CharacterController
+				if (isParented)
+				{
+					Debug.Log("Player đã được parent vào tàu - tắt gravity tạm thời");
+					// Có thể tắt gravity hoặc điều chỉnh movement khi ở trong tàu
+				}
+				else
+				{
+					Debug.Log("Player đã được unparent khỏi tàu - bật lại gravity");
+					// Reset lại các thông số movement bình thường
+				}
+			}
+		}
+
+		previousParent = transform.parent;
+	}
+
+	// Hàm xử lý di chuyển bằng bàn phím (có điều chỉnh cho parenting)
 	void HandleMovement()
 	{
 		if (controller.isGrounded && playerVelocity.y < 0)
@@ -124,8 +159,19 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		float currentSpeed = isRunning ? runSpeed : walkSpeed;
 		controller.Move(move.normalized * currentSpeed * Time.deltaTime);
 
-		playerVelocity.y += gravity * Time.deltaTime;
-		controller.Move(playerVelocity * Time.deltaTime);
+		// Điều chỉnh gravity dựa trên trạng thái parenting
+		if (!isParented)
+		{
+			// Chỉ áp dụng gravity khi không ở trong tàu
+			playerVelocity.y += gravity * Time.deltaTime;
+			controller.Move(playerVelocity * Time.deltaTime);
+		}
+		else
+		{
+			// Khi ở trong tàu, giảm gravity hoặc không áp dụng
+			playerVelocity.y += (gravity * 0.1f) * Time.deltaTime;
+			controller.Move(playerVelocity * Time.deltaTime);
+		}
 	}
 
 	// Hàm cập nhật animations (không thay đổi)

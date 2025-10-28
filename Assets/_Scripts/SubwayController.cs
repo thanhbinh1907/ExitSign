@@ -1,9 +1,7 @@
 ﻿using UnityEngine;
-using Photon.Pun; // 1. Thêm thư viện Photon
+using Photon.Pun;
 
-// 2. Yêu cầu phải có PhotonView
-[RequireComponent(typeof(PhotonView))]
-public class TrainController : MonoBehaviourPun
+public class SubwayController : MonoBehaviourPun
 {
 	// 3. Định nghĩa các trạng thái của tàu
 	public enum TrainState
@@ -105,12 +103,20 @@ public class TrainController : MonoBehaviourPun
 	[PunRPC]
 	void TeleportAndReturnRPC()
 	{
-		Debug.Log("RPC: Dịch chuyển và quay về.");
+		Debug.Log("RPC: Tàu teleport và quay về.");
 
-		// 1. Dịch chuyển tàu ngay lập tức đến đầu đường hầm
-		transform.position = teleportTarget.position;
+		// Teleport tàu về vị trí teleportTarget (nếu có)
+		if (teleportTarget != null)
+		{
+			transform.position = teleportTarget.position;
+		}
+		else
+		{
+			// Nếu không có teleportTarget, teleport về startPosition
+			transform.position = startPosition;
+		}
 
-		// 2. Đặt trạng thái để tàu chạy về
+		// Đặt trạng thái về Returning để tàu tự động di chuyển về ga
 		currentState = TrainState.Returning;
 	}
 }
