@@ -28,13 +28,11 @@ public class TrainParentTrigger : MonoBehaviourPun
 			{
 				Debug.Log("Người chơi (Local) đã LÊN TÀU. Gửi RPC đồng bộ.");
 
+				// Gửi RPC để set parent trước
 				photonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, true);
 
-				// SỬA LỖI: Sử dụng PhotonNetwork.LocalPlayer thay vì playerView.owner
-				if (controlButton != null)
-				{
-					controlButton.OnPlayerBoardingStatusChanged(PhotonNetwork.LocalPlayer.ActorNumber, true);
-				}
+				// SỬA: Gửi RPC để cập nhật trạng thái boarding trên TẤT CẢ clients
+				photonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, PhotonNetwork.LocalPlayer.ActorNumber, true);
 			}
 		}
 	}
@@ -49,13 +47,11 @@ public class TrainParentTrigger : MonoBehaviourPun
 			{
 				Debug.Log("Người chơi (Local) đã RỜI TÀU. Gửi RPC đồng bộ.");
 
+				// Gửi RPC để unparent trước
 				photonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, false);
 
-				// SỬA LỖI: Sử dụng PhotonNetwork.LocalPlayer thay vì playerView.owner
-				if (controlButton != null)
-				{
-					controlButton.OnPlayerBoardingStatusChanged(PhotonNetwork.LocalPlayer.ActorNumber, false);
-				}
+				// SỬA: Gửi RPC để cập nhật trạng thái boarding trên TẤT CẢ clients
+				photonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, PhotonNetwork.LocalPlayer.ActorNumber, false);
 			}
 		}
 	}
@@ -117,6 +113,22 @@ public class TrainParentTrigger : MonoBehaviourPun
 		else
 		{
 			Debug.LogError($"Không tìm thấy player với ViewID: {playerViewID}");
+		}
+	}
+
+	// RPC MỚI: Cập nhật trạng thái boarding trên tất cả clients
+	[PunRPC]
+	void UpdatePlayerBoardingStatus(int playerActorNumber, bool onTrain)
+	{
+		Debug.Log($"RPC: Cập nhật trạng thái player {playerActorNumber} trên tàu: {onTrain}");
+
+		if (controlButton != null)
+		{
+			controlButton.OnPlayerBoardingStatusChanged(playerActorNumber, onTrain);
+		}
+		else
+		{
+			Debug.LogError("Control button không tìm thấy!");
 		}
 	}
 }

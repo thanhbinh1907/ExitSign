@@ -24,18 +24,13 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 	void Start()
 	{
-		// ĐẢM BẢO TẤT CẢ UI ĐỀU ẨN TỪ ĐẦU
 		HideAllUI();
-
 		InitializePlayerTracking();
-
-		// Subscribe to Photon callbacks
 		PhotonNetwork.AddCallbackTarget(this);
 	}
 
 	void OnDestroy()
 	{
-		// Unsubscribe when destroyed
 		if (PhotonNetwork.NetworkingClient != null)
 		{
 			PhotonNetwork.RemoveCallbackTarget(this);
@@ -56,7 +51,6 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 	void Update()
 	{
-		// Kiểm tra trạng thái tàu để reset trainStarted
 		CheckTrainStatus();
 
 		if (playerInRange && Input.GetKeyDown(interactionKey))
@@ -65,18 +59,15 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 		}
 	}
 
-	// HÀM MỚI: Kiểm tra trạng thái tàu để reset button
 	void CheckTrainStatus()
 	{
 		if (trainController != null && trainStarted)
 		{
-			// Nếu tàu đã về trạng thái Idle, cho phép khởi động lại
 			if (trainController.GetCurrentState() == SubwayController.TrainState.Idle)
 			{
 				trainStarted = false;
 				Debug.Log("Tàu đã về ga. Button có thể sử dụng lại.");
 
-				// Cập nhật UI nếu player đang trong vùng
 				if (playerInRange)
 				{
 					UpdateUI();
@@ -93,7 +84,7 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			if (playerView != null && playerView.IsMine)
 			{
 				playerInRange = true;
-				UpdateUI(); // CHỈ HIỆN UI KHI VÀO VÙNG
+				UpdateUI();
 				Debug.Log("Vào vùng điều khiển tàu.");
 			}
 		}
@@ -107,7 +98,7 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			if (playerView != null && playerView.IsMine)
 			{
 				playerInRange = false;
-				HideAllUI(); // ẨN UI KHI RỜI VÙNG
+				HideAllUI();
 				Debug.Log("Rời vùng điều khiển tàu.");
 			}
 		}
@@ -115,21 +106,18 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 	void UpdateUI()
 	{
-		// CHỈ HIỆN UI NẾU PLAYER ĐANG TRONG VÙNG
 		if (!playerInRange)
 		{
 			HideAllUI();
 			return;
 		}
 
-		// Nếu tàu đang chạy, ẩn UI
 		if (trainController != null && trainController.GetCurrentState() != SubwayController.TrainState.Idle)
 		{
 			HideAllUI();
 			return;
 		}
 
-		// Kiểm tra điều kiện hiển thị UI
 		if (AreAllPlayersOnTrain())
 		{
 			if (interactionPrompt != null)
@@ -183,7 +171,6 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			return;
 		}
 
-		// SỬA: Kiểm tra trạng thái tàu thay vì trainStarted
 		if (trainController.GetCurrentState() != SubwayController.TrainState.Idle)
 		{
 			Debug.Log("Tàu đang hoạt động, không thể khởi động!");
@@ -205,6 +192,7 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 		photonView.RPC("OnTrainStarted", RpcTarget.Others);
 	}
 
+	// SỬA: Không gửi RPC nữa vì TrainParentTrigger đã gửi rồi
 	public void OnPlayerBoardingStatusChanged(int playerActorNumber, bool onTrain)
 	{
 		playersOnTrain[playerActorNumber] = onTrain;
@@ -216,19 +204,7 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 			UpdateUI();
 		}
 
-		photonView.RPC("SyncPlayerBoardingStatus", RpcTarget.Others, playerActorNumber, onTrain);
-	}
-
-	[PunRPC]
-	void SyncPlayerBoardingStatus(int playerActorNumber, bool onTrain)
-	{
-		playersOnTrain[playerActorNumber] = onTrain;
-		Debug.Log($"RPC: Player {playerActorNumber} trạng thái trên tàu: {onTrain}");
-
-		if (playerInRange)
-		{
-			UpdateUI();
-		}
+		// KHÔNG GỬI RPC NỮA - TrainParentTrigger đã xử lý
 	}
 
 	[PunRPC]
