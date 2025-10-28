@@ -29,6 +29,9 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	private Vector3 lastTrainPosition;
 	private Vector3 trainVelocity;
 
+	// NEW: Tham chiếu tới transform của tàu (không parent player)
+	private Transform trainTransformRef = null;
+
 	void Start()
 	{
 		controller = GetComponent<CharacterController>();
@@ -80,46 +83,11 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 
 	void Update()
 	{
-		// Tính toán train velocity nếu đang ở trên tàu
-		if (isOnTrain && transform.parent != null)
+		// Tính toán train velocity nếu đang ở trên tàu và có reference tới tàu
+		if (isOnTrain && trainTransformRef != null)
 		{
-			Vector3 currentTrainPosition = transform.parent.position;
-			Vector3 delta = currentTrainPosition - lastTrainPosition; // Tính khoảng cách tàu di chuyển
-
-			// KIỂM TRA TELEPORT: 
-			// Nếu tàu di chuyển hơn 20 mét TRONG 1 FRAME (delta.sqrMagnitude > 20*20)
-			// -> Đây chắc chắn là một cú teleport, không phải di chuyển thường.
-			if (delta.sqrMagnitude > 400f && photonView.IsMine && controller.enabled)
-			{
-				// ---- BƯỚC XỬ LÝ TELEPORT ----
-				// 1. Tạm thời TẮT CharacterController
-				controller.enabled = false;
-
-				// 2. Di chuyển transform của Player đi một khoảng bằng đúng delta
-				transform.position += delta;
-
-				// 3. BẬT lại CharacterController
-				controller.enabled = true;
-
-				// 4. Đặt vận tốc tàu bằng 0 cho frame này
-				// (vì chúng ta đã tự di chuyển player rồi)
-				trainVelocity = Vector3.zero;
-			}
-			else
-			{
-				// ---- XỬ LÝ DI CHUYỂN THƯỜNG (mượt) ----
-				// Nếu Time.deltaTime rất nhỏ hoặc bằng 0, không chia
-				if (Time.deltaTime > float.Epsilon)
-				{
-					trainVelocity = delta / Time.deltaTime;
-				}
-				else
-				{
-					trainVelocity = Vector3.zero;
-				}
-			}
-
-			// Luôn cập nhật vị trí cuối cùng
+			Vector3 currentTrainPosition = trainTransformRef.position;
+			trainVelocity = (currentTrainPosition - lastTrainPosition) / Time.deltaTime;
 			lastTrainPosition = currentTrainPosition;
 		}
 
@@ -138,18 +106,47 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		// Animation sẽ do PhotonAnimatorView lo.
 	}
 
-	// Hàm public để set trạng thái trên tàu
+	// Hàm public để set trạng thái trên tàu (giữ để tương thích)
 	public void SetOnTrain(bool onTrain)
 	{
+		// Nếu không có trainTransformRef thì chỉ bật trạng thái onTrain mà không có tham chiếu tàu
 		isOnTrain = onTrain;
 
-		if (onTrain && transform.parent != null)
+		if (onTrain)
 		{
-			lastTrainPosition = transform.parent.position;
-			trainVelocity = Vector3.zero;
+			// Nếu không có train reference, dùng vị trí hiện tại làm lastTrainPosition
+			if (trainTransformRef == null)
+			{
+				lastTrainPosition = transform.position;
+				trainVelocity = Vector3.zero;
+			}
+		}
+		else
+		{
+			// Clear reference khi rời tàu
+			trainTransformRef = null;
 		}
 
 		Debug.Log($"Player {name} trạng thái trên tàu: {onTrain}");
+	}
+
+	// NEW: Hàm để nhận transform của tàu (không parent player)
+	public void SetTrainTransform(Transform train, bool onTrain)
+	{
+		isOnTrain = onTrain;
+		trainTransformRef = onTrain ? train : null;
+
+		if (onTrain && trainTransformRef != null)
+		{
+			lastTrainPosition = trainTransformRef.position;
+			trainVelocity = Vector3.zero;
+		}
+		else if (!onTrain)
+		{
+			trainTransformRef = null;
+		}
+
+		Debug.Log($"Player {name} SetTrainTransform called. OnTrain={onTrain}, TrainRef={(trainTransformRef != null ? trainTransformRef.name : "null")}");
 	}
 
 	// Hàm xử lý di chuyển bằng bàn phím (có điều chỉnh cho train movement)
@@ -190,7 +187,7 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		float currentSpeed = isRunning ? runSpeed : walkSpeed;
 
 		// QUAN TRỌNG: Nếu đang ở trên tàu, thêm train velocity
-		if (isOnTrain && transform.parent != null)
+		if (isOnTrain && trainTransformRef != null)
 		{
 			// Thêm chuyển động của tàu vào movement của player
 			Vector3 trainMovement = trainVelocity * Time.deltaTime;

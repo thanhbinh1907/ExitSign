@@ -43,7 +43,7 @@ public class TrainParentTrigger : MonoBehaviour
 				int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
 				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã LÊN TÀU. Gửi RPC đồng bộ.");
 
-				// 4. Dùng biến 'myPhotonView'
+				// 4. Dùng biến 'myPhotonView' để gọi RPC cho tất cả client
 				if (myPhotonView != null)
 				{
 					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, true);
@@ -77,8 +77,7 @@ public class TrainParentTrigger : MonoBehaviour
 		}
 	}
 
-	// --- Các hàm RPC giữ nguyên, không thay đổi ---
-
+	// --- Các hàm RPC đã được chỉnh sửa để KHÔNG parent player nữa ---
 	[PunRPC]
 	void SetPlayerParent(int playerViewID, bool shouldParent)
 	{
@@ -90,24 +89,25 @@ public class TrainParentTrigger : MonoBehaviour
 
 			if (shouldParent)
 			{
-				Debug.Log($"RPC: Gắn player {targetPlayer.name} vào tàu trên tất cả clients.");
-				targetPlayer.transform.SetParent(trainTransform);
-
+				// Thay vì parent, chỉ truyền tham chiếu train cho PlayerMovement
+				Debug.Log($"RPC: Gán tham chiếu tàu cho player {targetPlayer.name} trên tất cả clients.");
 				if (playerMovement != null)
 				{
-					playerMovement.SetOnTrain(true);
+					playerMovement.SetTrainTransform(trainTransform, true);
+				}
+				else
+				{
+					Debug.LogWarning("PlayerMovement component không tìm thấy trên target player!");
 				}
 			}
 			else
 			{
-				Debug.Log($"RPC: Thả player {targetPlayer.name} ra khỏi tàu trên tất cả clients.");
-
+				// Bỏ tham chiếu tàu
+				Debug.Log($"RPC: Tháo tham chiếu tàu cho player {targetPlayer.name} trên tất cả clients.");
 				if (playerMovement != null)
 				{
-					playerMovement.SetOnTrain(false);
+					playerMovement.SetTrainTransform(null, false);
 				}
-
-				targetPlayer.transform.SetParent(null);
 			}
 		}
 		else
