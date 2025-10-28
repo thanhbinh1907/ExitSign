@@ -91,6 +91,11 @@ public class SubwayController : MonoBehaviourPun
 		}
 	}
 
+	public TrainState GetCurrentState()
+	{
+		return currentState;
+	}
+
 	// --- CÁC HÀM RPC ĐỒNG BỘ ---
 
 	[PunRPC]
