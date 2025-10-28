@@ -58,15 +58,60 @@ public class TrainParentTrigger : MonoBehaviourPun
 
 		if (targetPlayer != null)
 		{
+			// Lấy PlayerMovement component để disable/enable CharacterController
+			PlayerMovement playerMovement = targetPlayer.GetComponent<PlayerMovement>();
+
 			if (shouldParent)
 			{
 				Debug.Log($"RPC: Gắn player {targetPlayer.name} vào tàu trên tất cả clients.");
+
+				// TẮT CharacterController trước khi parenting
+				CharacterController controller = targetPlayer.GetComponent<CharacterController>();
+				if (controller != null)
+				{
+					controller.enabled = false;
+				}
+
+				// Set parent
 				targetPlayer.transform.SetParent(trainTransform);
+
+				// BẬT lại CharacterController sau khi parenting
+				if (controller != null)
+				{
+					controller.enabled = true;
+				}
+
+				// Thông báo cho PlayerMovement script
+				if (playerMovement != null)
+				{
+					playerMovement.SetOnTrain(true);
+				}
 			}
 			else
 			{
 				Debug.Log($"RPC: Thả player {targetPlayer.name} ra khỏi tàu trên tất cả clients.");
+
+				// Thông báo cho PlayerMovement script
+				if (playerMovement != null)
+				{
+					playerMovement.SetOnTrain(false);
+				}
+
+				// TẮT CharacterController trước khi un-parenting
+				CharacterController controller = targetPlayer.GetComponent<CharacterController>();
+				if (controller != null)
+				{
+					controller.enabled = false;
+				}
+
+				// Un-parent
 				targetPlayer.transform.SetParent(null);
+
+				// BẬT lại CharacterController
+				if (controller != null)
+				{
+					controller.enabled = true;
+				}
 			}
 		}
 		else
