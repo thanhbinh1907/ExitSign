@@ -24572,7 +24572,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ce7696b44469d145a3ac32ecd5241f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrainDoor
-  openOffset: {x: 0, y: 0, z: 1.532}
+  openOffset: {x: 0, y: 0, z: 1}
   doorSpeed: 1.5
 --- !u!4 &7885767572084909925
 Transform:
@@ -25126,7 +25126,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ce7696b44469d145a3ac32ecd5241f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrainDoor
-  openOffset: {x: 0, y: 0, z: -1.934}
+  openOffset: {x: 0, y: 0, z: -1}
   doorSpeed: 1.5
 --- !u!23 &8232782072919899494
 MeshRenderer:
