@@ -41,6 +41,11 @@ public class SubwayController : MonoBehaviourPun
 
 		// Tìm control button
 		controlButton = FindObjectOfType<TrainControlButton>();
+
+		foreach (TrainDoor door in trainDoors)
+		{
+			door.Open();
+		}
 	}
 
 	void Update()
