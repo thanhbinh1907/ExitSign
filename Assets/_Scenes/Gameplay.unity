@@ -16850,6 +16850,7 @@ GameObject:
   - component: {fileID: 921538805271240412}
   - component: {fileID: 7874855097523519535}
   - component: {fileID: 7874855097523519536}
+  - component: {fileID: 7874855097523519537}
   m_Layer: 0
   m_Name: Door.007
   m_TagString: Untagged
@@ -17788,6 +17789,9 @@ MonoBehaviour:
   endTarget: {fileID: 1708841588}
   teleportTarget: {fileID: 781048788}
   endTriggerTag: TrainEndTrigger
+  trainDoors:
+  - {fileID: 7874855097523519537}
+  - {fileID: 8202087366071771692}
 --- !u!33 &905229281481323786
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -19368,7 +19372,7 @@ Transform:
   m_GameObject: {fileID: 8202087366071771690}
   serializedVersion: 2
   m_LocalRotation: {x: -0.50000006, y: 0.49999994, z: 0.49999997, w: 0.50000006}
-  m_LocalPosition: {x: 4.732, y: 2.7449017, z: -2.012}
+  m_LocalPosition: {x: 4.732, y: 2.7449017, z: -1.054}
   m_LocalScale: {x: 100, y: 73.46244, z: 100}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -24014,7 +24018,7 @@ Transform:
   m_GameObject: {fileID: 355828826409222051}
   serializedVersion: 2
   m_LocalRotation: {x: 0.50000006, y: 0.49999997, z: -0.5, w: 0.5}
-  m_LocalPosition: {x: 4.7318206, y: 2.7449017, z: 1.996}
+  m_LocalPosition: {x: 4.7318206, y: 2.7449017, z: 0.579}
   m_LocalScale: {x: -100, y: -73.46244, z: -100}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -24556,6 +24560,20 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -7820532246751499711, guid: 39db2e63a3f9115418275c2b40c01ad3, type: 3}
+--- !u!114 &7874855097523519537
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 355828826409222051}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ce7696b44469d145a3ac32ecd5241f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TrainDoor
+  openOffset: {x: 0, y: 0, z: 1.532}
+  doorSpeed: 1.5
 --- !u!4 &7885767572084909925
 Transform:
   m_ObjectHideFlags: 0
@@ -25066,6 +25084,7 @@ GameObject:
   - component: {fileID: 2123033625581626542}
   - component: {fileID: 2512414190257297801}
   - component: {fileID: 8202087366071771691}
+  - component: {fileID: 8202087366071771692}
   m_Layer: 0
   m_Name: Door.006
   m_TagString: Untagged
@@ -25095,6 +25114,20 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -2385392119167485068, guid: 39db2e63a3f9115418275c2b40c01ad3, type: 3}
+--- !u!114 &8202087366071771692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8202087366071771690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ce7696b44469d145a3ac32ecd5241f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TrainDoor
+  openOffset: {x: 0, y: 0, z: -1.934}
+  doorSpeed: 1.5
 --- !u!23 &8232782072919899494
 MeshRenderer:
   m_ObjectHideFlags: 0

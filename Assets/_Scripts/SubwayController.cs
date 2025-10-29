@@ -25,6 +25,9 @@ public class SubwayController : MonoBehaviourPun
 	[Tooltip("Tag của GameObject Trigger ở cuối đường ray")]
 	public string endTriggerTag = "TrainEndTrigger";
 
+	[Header("Door Controls")]
+	public System.Collections.Generic.List<TrainDoor> trainDoors;
+
 	private Vector3 startPosition; // Vị trí ban đầu của tàu
 	private TrainState currentState = TrainState.Idle;
 
@@ -60,6 +63,12 @@ public class SubwayController : MonoBehaviourPun
 			{
 				currentState = TrainState.Idle;
 				Debug.Log("Tàu đã về ga và dừng lại.");
+
+				// --- THÊM CODE MỞ CỬA ---
+				foreach (TrainDoor door in trainDoors)
+				{
+					door.Open();
+				}
 
 				// THÔNG BÁO CHO CONTROL BUTTON RESET
 				if (controlButton != null)
@@ -115,6 +124,13 @@ public class SubwayController : MonoBehaviourPun
 	{
 		Debug.Log("RPC: Tàu bắt đầu di chuyển.");
 		currentState = TrainState.MovingForward;
+
+		// --- THÊM CODE ĐÓNG CỬA ---
+		foreach (TrainDoor door in trainDoors)
+		{
+			door.Close();
+		}
+
 	}
 
 	// --- HÀM ĐÃ ĐƯỢC CẬP NHẬT ---
