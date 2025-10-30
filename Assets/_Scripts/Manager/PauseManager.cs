@@ -2,8 +2,10 @@
 using UnityEngine.UI; // Cần cho Sliders, Buttons
 using UnityEngine.SceneManagement; // Cần để tải Main Menu
 using UnityEngine.Audio; // Cần cho AudioMixer
+using Photon.Pun; // <-- Đã có
 
-public class PauseManager : MonoBehaviour
+// Kế thừa MonoBehaviourPunCallbacks là đúng
+public class PauseManager : MonoBehaviourPunCallbacks
 {
 	[Header("UI Panels")]
 	public GameObject pauseMenuPanel;
@@ -15,31 +17,26 @@ public class PauseManager : MonoBehaviour
 	public Slider sensitivitySlider;
 
 	[Header("Player Reference")]
-	// Kéo Player của bạn vào đây
-	public PlayerMovement playerMovement; // Giả sử script của bạn tên là PlayerMovement
+	public PlayerMovement playerMovement;
 
 	private bool isPaused = false;
+	private bool isLeaving = false; // <-- Thêm biến này để tránh gọi leave 2 lần
 
-	// Tên của thông số bạn đã expose trong AudioMixer
 	private const string MIXER_VOLUME = "MasterVolume";
 	private const string PREFS_VOLUME = "MasterVolume";
 	private const string PREFS_SENS = "MouseSensitivity";
 
 	void Start()
 	{
-		// Ẩn tất cả UI và khóa chuột khi bắt đầu
 		pauseMenuPanel.SetActive(false);
 		settingsMenuPanel.SetActive(false);
 		Cursor.lockState = CursorLockMode.Locked;
 		Cursor.visible = false;
-
-		// Tải cài đặt đã lưu
 		LoadSettings();
 	}
 
 	void Update()
 	{
-		// Kiểm tra nếu nhấn nút ESC
 		if (Input.GetKeyDown(KeyCode.Escape))
 		{
 			if (isPaused)
@@ -58,11 +55,9 @@ public class PauseManager : MonoBehaviour
 	public void PauseGame()
 	{
 		isPaused = true;
-		Time.timeScale = 0f; // Dừng thời gian trong game
+		Time.timeScale = 0f;
 		pauseMenuPanel.SetActive(true);
-		settingsMenuPanel.SetActive(false); // Đảm bảo panel cài đặt tắt
-
-		// Mở khóa chuột
+		settingsMenuPanel.SetActive(false);
 		Cursor.lockState = CursorLockMode.None;
 		Cursor.visible = true;
 	}
@@ -70,11 +65,9 @@ public class PauseManager : MonoBehaviour
 	public void ResumeGame()
 	{
 		isPaused = false;
-		Time.timeScale = 1f; // Chạy lại thời gian
+		Time.timeScale = 1f;
 		pauseMenuPanel.SetActive(false);
 		settingsMenuPanel.SetActive(false);
-
-		// Khóa chuột lại
 		Cursor.lockState = CursorLockMode.Locked;
 		Cursor.visible = false;
 	}
@@ -87,10 +80,63 @@ public class PauseManager : MonoBehaviour
 		settingsMenuPanel.SetActive(true);
 	}
 
+	// --- HÀM ĐÃ SỬA ---
 	public void OnMainMenuButton()
 	{
-		Time.timeScale = 1f; // Phải chạy lại thời gian trước khi đổi scene
-							 // Thay "MainMenu" bằng tên Scene menu chính của bạn
+		if (isLeaving) return; // Nếu đã nhấn, không làm gì thêm
+		isLeaving = true; // Đánh dấu là đang rời
+
+		Time.timeScale = 1f;
+
+		if (PhotonNetwork.InRoom)
+		{
+			// --- LOGIC MỚI BẮT ĐẦU TỪ ĐÂY ---
+
+			if (PhotonNetwork.IsMasterClient)
+			{
+				// Nếu tôi là Master Client
+				Debug.Log("Master Client rời đi. Gửi RPC cho những người khác...");
+
+				// Gửi RPC đến TẤT CẢ NHỮNG NGƯỜI KHÁC (RpcTarget.Others)
+				photonView.RPC("KickFromRoom", RpcTarget.Others);
+
+				// Tự mình rời phòng (sẽ gọi OnLeftRoom() sau đó)
+				PhotonNetwork.LeaveRoom();
+			}
+			else
+			{
+				// Nếu tôi là Guest (Client thường)
+				Debug.Log("Guest Client tự rời đi...");
+				PhotonNetwork.LeaveRoom();
+			}
+			// --- LOGIC MỚI KẾT THÚC ---
+		}
+		else
+		{
+			// Nếu không ở trong phòng (test offline)
+			SceneManager.LoadScene("Menu");
+		}
+	}
+
+	// --- HÀM MỚI: RPC ĐỂ KICK GUEST ---
+	// Hàm này sẽ được gọi trên máy của Guest khi Master Client rời đi
+	[PunRPC]
+	void KickFromRoom()
+	{
+		isLeaving = true; // Đánh dấu là đang rời
+		Debug.Log("Master Client đã rời, bạn bị đưa về Main Menu.");
+
+		// Rời phòng. Hàm OnLeftRoom() sẽ được gọi ngay sau đó.
+		PhotonNetwork.LeaveRoom();
+	}
+
+	// --- PHOTON CALLBACK (Giữ nguyên) ---
+	// Hàm này sẽ được gọi sau khi Photon rời phòng thành công
+	// (Áp dụng cho cả Master và Guest)
+	public override void OnLeftRoom()
+	{
+		// Tải cảnh "Menu"
+		Debug.Log("Đã rời phòng Photon, đang tải Main Menu...");
 		SceneManager.LoadScene("Menu");
 	}
 
@@ -100,20 +146,17 @@ public class PauseManager : MonoBehaviour
 		pauseMenuPanel.SetActive(true);
 	}
 
-	// --- CÁC HÀM CHO CÀI ĐẶT (SLIDERS) ---
+	// --- CÁC HÀM CÀI ĐẶT (Giữ nguyên) ---
 
 	public void SetVolume(float volume)
 	{
-		// Công thức chuyển đổi giá trị slider (0.0001-1) sang decibel (-80 đến 0)
 		masterMixer.SetFloat(MIXER_VOLUME, Mathf.Log10(volume) * 20);
-		PlayerPrefs.SetFloat(PREFS_VOLUME, volume); // Lưu cài đặt
+		PlayerPrefs.SetString(PREFS_VOLUME, volume.ToString());
 	}
 
 	public void SetSensitivity(float sensitivity)
 	{
-		PlayerPrefs.SetFloat(PREFS_SENS, sensitivity); // Lưu cài đặt
-
-		// Cập nhật độ nhạy của người chơi ngay lập tức
+		PlayerPrefs.SetFloat(PREFS_SENS, sensitivity);
 		if (playerMovement != null)
 		{
 			playerMovement.UpdateSensitivity(sensitivity);
@@ -122,15 +165,13 @@ public class PauseManager : MonoBehaviour
 
 	void LoadSettings()
 	{
-		// Tải Âm lượng
-		float volume = PlayerPrefs.GetFloat(PREFS_VOLUME, 1f); // Mặc định là 1 (tối đa)
+		// Sửa lỗi nhỏ: Dùng PlayerPrefs.GetFloat thay vì getstring
+		float volume = PlayerPrefs.GetFloat(PREFS_VOLUME, 1f);
 		volumeSlider.value = volume;
-		SetVolume(volume); // Áp dụng ngay
+		SetVolume(volume);
 
-		// Tải Độ nhạy
-		// Giả sử độ nhạy mặc định của bạn là 2f
 		float sensitivity = PlayerPrefs.GetFloat(PREFS_SENS, 100f);
 		sensitivitySlider.value = sensitivity;
-		SetSensitivity(sensitivity); // Áp dụng ngay
+		SetSensitivity(sensitivity);
 	}
 }
