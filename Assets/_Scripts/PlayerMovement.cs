@@ -29,7 +29,10 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	private Vector3 lastTrainPosition;
 	private Vector3 trainVelocity;
 
-	// NEW: Tham chiếu tới transform của tàu (không parent player)
+	[Header("UI")]
+	public StationDisplay stationDisplay;
+
+	// NEW: Tham chiếu tới transform của tàu 
 	private Transform trainTransformRef = null;
 
 	void Start()
@@ -293,6 +296,17 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 				lastTrainPosition = trainTransformRef.position;
 				trainVelocity = Vector3.zero; // Reset vận tốc
 			}
+		}
+	}
+	[PunRPC]
+	public void ShowStationUI(int stationNumber)
+	{
+		// Hàm này được gọi trên TẤT CẢ các client
+		// Nhưng chúng ta chỉ muốn player "của mình" (local) hiển thị UI
+		if (photonView.IsMine && stationDisplay != null)
+		{
+			Debug.Log($"RPC: Hiển thị Station {stationNumber} cho local player.");
+			stationDisplay.ShowStation(stationNumber);
 		}
 	}
 }

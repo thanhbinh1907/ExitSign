@@ -30,9 +30,13 @@ public class SubwayController : MonoBehaviourPun
 
 	private Vector3 startPosition; // Vị trí ban đầu của tàu
 	private TrainState currentState = TrainState.Idle;
+	
+	private int currentStationCount = 0;
 
 	// Reference đến TrainControlButton để reset khi cần
 	private TrainControlButton controlButton;
+
+	private StationAnomalyManager instance;
 
 	void Start()
 	{
@@ -73,6 +77,30 @@ public class SubwayController : MonoBehaviourPun
 				foreach (TrainDoor door in trainDoors)
 				{
 					door.Open();
+				}
+
+				if (PhotonNetwork.IsMasterClient)
+				{
+					bool hasAnomaly = instance.hasAnomaly();
+					// 1. Tăng số đếm trạm
+					if (hasAnomaly)
+					{
+						currentStationCount++;
+					} else {
+						currentStationCount = 0;
+					}
+					Debug.Log($"Đã đến trạm: {currentStationCount}. Gửi RPC.");
+
+					// 2. Gửi RPC cho TẤT CẢ người chơi để hiển thị UI
+					PlayerMovement[] allPlayers = FindObjectsOfType<PlayerMovement>();
+					foreach (PlayerMovement player in allPlayers)
+					{
+						PhotonView playerPV = player.GetComponent<PhotonView>();
+						if (playerPV != null)
+						{
+							playerPV.RPC("ShowStationUI", RpcTarget.All, currentStationCount);
+						}
+					}
 				}
 
 				// THÔNG BÁO CHO CONTROL BUTTON RESET

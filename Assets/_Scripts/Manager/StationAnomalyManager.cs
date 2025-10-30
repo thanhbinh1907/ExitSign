@@ -39,6 +39,11 @@ public class StationAnomalyManager : MonoBehaviourPun
 		photonView.RPC("SyncAnomalyState", RpcTarget.AllBuffered, anomalyID);
 	}
 
+	public bool hasAnomaly()
+	{
+		return isStationNormal;
+	}
+
 	[PunRPC]
 	void SyncAnomalyState(int id)
 	{
