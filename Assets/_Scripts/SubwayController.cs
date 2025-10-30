@@ -28,9 +28,12 @@ public class SubwayController : MonoBehaviourPun
 	[Header("Door Controls")]
 	public System.Collections.Generic.List<TrainDoor> trainDoors;
 
+	[Header("Âm thanh")] // <-- THÊM MỚI
+	public AudioSource trainSoundSource; // <-- THÊM MỚI (Kéo AudioSource vào đây)
+
 	private Vector3 startPosition; // Vị trí ban đầu của tàu
 	private TrainState currentState = TrainState.Idle;
-	
+
 	private int currentStationCount = 0;
 
 	// Reference đến TrainControlButton để reset khi cần
@@ -49,6 +52,12 @@ public class SubwayController : MonoBehaviourPun
 		foreach (TrainDoor door in trainDoors)
 		{
 			door.Open();
+		}
+
+		// Đảm bảo âm thanh tàu tắt khi bắt đầu
+		if (trainSoundSource != null)
+		{
+			trainSoundSource.Stop();
 		}
 	}
 
@@ -73,6 +82,9 @@ public class SubwayController : MonoBehaviourPun
 				currentState = TrainState.Idle;
 				Debug.Log("Tàu đã về ga và dừng lại.");
 
+				// --- TẮT ÂM THANH TÀU --- // <-- THÊM MỚI
+				if (trainSoundSource != null) trainSoundSource.Stop();
+
 				// --- THÊM CODE MỞ CỬA ---
 				foreach (TrainDoor door in trainDoors)
 				{
@@ -86,7 +98,9 @@ public class SubwayController : MonoBehaviourPun
 					if (hasAnomaly)
 					{
 						currentStationCount++;
-					} else {
+					}
+					else
+					{
 						currentStationCount = 0;
 					}
 					Debug.Log($"Đã đến trạm: {currentStationCount}. Gửi RPC.");
@@ -157,6 +171,9 @@ public class SubwayController : MonoBehaviourPun
 	{
 		Debug.Log("RPC: Tàu bắt đầu di chuyển.");
 		currentState = TrainState.MovingForward;
+
+		// --- PHÁT ÂM THANH TÀU --- // <-- THÊM MỚI
+		if (trainSoundSource != null) trainSoundSource.Play();
 
 		// --- THÊM CODE ĐÓNG CỬA ---
 		foreach (TrainDoor door in trainDoors)
