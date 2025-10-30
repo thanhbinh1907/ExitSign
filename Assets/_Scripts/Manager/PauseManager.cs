@@ -91,7 +91,7 @@ public class PauseManager : MonoBehaviour
 	{
 		Time.timeScale = 1f; // Phải chạy lại thời gian trước khi đổi scene
 							 // Thay "MainMenu" bằng tên Scene menu chính của bạn
-		SceneManager.LoadScene("MainMenu");
+		SceneManager.LoadScene("Menu");
 	}
 
 	public void OnBackButton()
