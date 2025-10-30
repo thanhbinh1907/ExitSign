@@ -44,6 +44,12 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			animator = GetComponent<Animator>();
 		}
 
+		// --- THAY ĐỔI BẮT ĐẦU ---
+		// Tải độ nhạy đã lưu khi game bắt đầu
+		// Sử dụng giá trị mặc định 100f nếu chưa có gì được lưu
+		mouseSensitivity = PlayerPrefs.GetFloat("MouseSensitivity", 100.0f);
+		// --- THAY ĐỔI KẾT THÚC ---
+
 		// 3. Gộp logic từ cả hai file vào đây
 		if (photonView.IsMine)
 		{
@@ -86,6 +92,14 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 
 	void Update()
 	{
+		// --- THAY ĐỔI BẮT ĐẦU ---
+		// Nếu game đang tạm dừng (pause), không làm gì cả
+		if (Time.timeScale == 0f)
+		{
+			return;
+		}
+		// --- THAY ĐỔI KẾT THÚC ---
+
 		// Tính toán train velocity nếu đang ở trên tàu và có reference tới tàu
 		if (isOnTrain && trainTransformRef != null)
 		{
@@ -308,5 +322,11 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			Debug.Log($"RPC: Hiển thị Station {stationNumber} cho local player.");
 			stationDisplay.ShowStation(stationNumber);
 		}
+	}
+
+	// --- HÀM MỚI ĐỂ PAUSEMANAGER GỌI ---
+	public void UpdateSensitivity(float newSensitivity)
+	{
+		mouseSensitivity = newSensitivity;
 	}
 }
