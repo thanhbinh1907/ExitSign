@@ -13444,7 +13444,7 @@ MonoBehaviour:
   - {fileID: 1142945280}
   - {fileID: 1169262344}
   isStationNormal: 1
-  subwayController: {fileID: 0}
+  subwayController: {fileID: 897823268600606368}
 --- !u!4 &1410201255
 Transform:
   m_ObjectHideFlags: 0
