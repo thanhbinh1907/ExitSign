@@ -1488,7 +1488,20 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
 	public void OnMasterStartGame()
 	{
-		Debug.Log("🎮 Master client starting game");
+		Debug.Log("🎮 Master client starting game. Closing room...");
+
+		// --- THÊM CÁC DÒNG NÀY ---
+		// 1. Đóng phòng: Ngăn người khác join (JoinRoom)
+		if (PhotonNetwork.InRoom)
+		{
+			PhotonNetwork.CurrentRoom.IsOpen = false;
+
+			// 2. Ẩn phòng: Ngăn phòng xuất hiện trong danh sách lobby
+			PhotonNetwork.CurrentRoom.IsVisible = false;
+		}
+		// --- KẾT THÚC THÊM ---
+
+		Debug.Log("Room closed. Loading Gameplay scene...");
 		PhotonNetwork.LoadLevel("Gameplay");
 	}
 
