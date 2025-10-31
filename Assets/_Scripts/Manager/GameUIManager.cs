@@ -4,19 +4,20 @@ using Photon.Pun; // Cần cho PhotonNetwork
 using UnityEngine.SceneManagement; // Cần cho SceneManager
 using TMPro;
 
-public class GameUIManager : MonoBehaviour
+// 1. THAY ĐỔI: Kế thừa từ MonoBehaviourPunCallbacks
+public class GameUIManager : MonoBehaviourPunCallbacks
 {
 	[Header("UI Panels")]
 	public GameObject winScreenPanel;
 	public GameObject loseScreenPanel;
 
 	[Header("Win Screen Buttons")]
-	public Button winReplayButton;
-	public Button winMenuButton;
+	[Tooltip("Nút duy nhất trên màn hình Win (Tên cũ là winReplayButton)")]
+	public Button winReplayButton; // Giờ đây là nút duy nhất
 
 	[Header("Lose Screen Buttons")]
-	public Button loseReplayButton;
-	public Button loseMenuButton;
+	[Tooltip("Nút duy nhất trên màn hình Lose (Tên cũ là loseReplayButton)")]
+	public Button loseReplayButton; // Giờ đây là nút duy nhất
 
 	[Header("Scene Names")]
 	[Tooltip("Tên chính xác của cảnh Main Menu của bạn")]
@@ -28,23 +29,16 @@ public class GameUIManager : MonoBehaviour
 		if (winScreenPanel != null) winScreenPanel.SetActive(false);
 		if (loseScreenPanel != null) loseScreenPanel.SetActive(false);
 
-		// Gán listener cho TẤT CẢ các nút
-		// Tất cả đều gọi chung một hàm: OnLeaveGameClicked
+		// --- 2. THAY ĐỔI: Chỉ gán listener cho các nút TỒN TẠI ---
+		// Nút "Replay" (nút duy nhất bạn muốn)
 		if (winReplayButton != null)
 		{
 			winReplayButton.onClick.AddListener(OnLeaveGameClicked);
 		}
-		if (winMenuButton != null)
-		{
-			winMenuButton.onClick.AddListener(OnLeaveGameClicked);
-		}
+
 		if (loseReplayButton != null)
 		{
 			loseReplayButton.onClick.AddListener(OnLeaveGameClicked);
-		}
-		if (loseMenuButton != null)
-		{
-			loseMenuButton.onClick.AddListener(OnLeaveGameClicked);
 		}
 	}
 
@@ -75,6 +69,7 @@ public class GameUIManager : MonoBehaviour
 		Cursor.visible = true;
 	}
 
+	// --- 3. THAY ĐỔI: Sửa lỗi tự động rejoin ---
 	/// <summary>
 	/// Hàm này được TẤT CẢ các nút (Replay, Main Menu) gọi.
 	/// Nó sẽ rời phòng Photon và tải lại cảnh Main Menu.
@@ -88,10 +83,21 @@ public class GameUIManager : MonoBehaviour
 		{
 			PhotonNetwork.LeaveRoom();
 		}
+		else
+		{
+			// Nếu không ở trong phòng (test offline), tải scene ngay
+			SceneManager.LoadScene(mainMenuSceneName);
+		}
+	}
 
-		// Tải cảnh Main Menu
-		// NetworkManager của bạn ở cảnh Main Menu sẽ tự động xử lý 
-		// việc "đã rời phòng" và hiển thị lại Lobby.
+	// --- 4. THÊM MỚI: Callback sau khi rời phòng ---
+	/// <summary>
+	/// Hàm này được Photon gọi TỰ ĐỘNG sau khi rời phòng thành công.
+	/// </summary>
+	public override void OnLeftRoom()
+	{
+		// Bây giờ mới an toàn để tải Main Menu
+		Debug.Log("Đã rời phòng, đang tải Main Menu...");
 		SceneManager.LoadScene(mainMenuSceneName);
 	}
 }

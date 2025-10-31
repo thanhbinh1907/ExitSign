@@ -7987,7 +7987,6 @@ MonoBehaviour:
   masterMixer: {fileID: 24100000, guid: 7ed5d09e6fb0f58489470dd3d1151090, type: 2}
   volumeSlider: {fileID: 659798419}
   sensitivitySlider: {fileID: 392786490}
-  playerMovement: {fileID: 786747378}
 --- !u!4 &752619652
 Transform:
   m_ObjectHideFlags: 0
@@ -8237,17 +8236,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 784803129}
   m_Mesh: {fileID: 1464912303375288570, guid: 39db2e63a3f9115418275c2b40c01ad3, type: 3}
---- !u!114 &786747378 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4616293886986955031, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
-  m_PrefabInstance: {fileID: 1981805595}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0985bdb4a17246440b2f13c62f8d0bbc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
 --- !u!1 &788919861
 GameObject:
   m_ObjectHideFlags: 0
@@ -13456,6 +13444,7 @@ MonoBehaviour:
   - {fileID: 1142945280}
   - {fileID: 1169262344}
   isStationNormal: 1
+  subwayController: {fileID: 0}
 --- !u!4 &1410201255
 Transform:
   m_ObjectHideFlags: 0
@@ -18937,6 +18926,7 @@ GameObject:
   - component: {fileID: 1972645617}
   - component: {fileID: 1972645619}
   - component: {fileID: 1972645618}
+  - component: {fileID: 1972645620}
   m_Layer: 0
   m_Name: Hitbox
   m_TagString: Untagged
@@ -18988,6 +18978,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1972645616}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1972645620
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1972645616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9e5fa64a438aa4d9fa40afbe7cd120, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
 --- !u!1 &1976154465
 GameObject:
   m_ObjectHideFlags: 0
@@ -19111,9 +19113,61 @@ PrefabInstance:
       propertyPath: sceneViewId
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 8295402200437249758, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+    - target: {fileID: 674916668088882565, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 717289732232683649, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 717289732232683649, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 717289732232683649, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3251001373831635051, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3597352201957194779, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 6df2104b0b05f3c4283e7c09725b1cfe, type: 3}
+    - target: {fileID: 3792736278744772341, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: winMenuButton
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 3792736278744772341, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: winScreenPanel
+      value: 
+      objectReference: {fileID: 1981805599}
+    - target: {fileID: 3792736278744772341, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: loseScreenPanel
+      value: 
+      objectReference: {fileID: 1981805597}
+    - target: {fileID: 3792736278744772341, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: winReplayButton
+      value: 
+      objectReference: {fileID: 1981805598}
+    - target: {fileID: 3792736278744772341, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: loseReplayButton
+      value: 
+      objectReference: {fileID: 1981805596}
+    - target: {fileID: 3792736278744772341, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: mainMenuSceneName
+      value: Menu
+      objectReference: {fileID: 0}
+    - target: {fileID: 6696157166193041078, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8295402200437249758, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
       propertyPath: m_Name
@@ -19121,7 +19175,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
       propertyPath: m_TagString
@@ -19172,6 +19226,38 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+--- !u!114 &1981805596 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 717289732232683649, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+  m_PrefabInstance: {fileID: 1981805595}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!1 &1981805597 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 674916668088882565, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+  m_PrefabInstance: {fileID: 1981805595}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1981805598 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4485469089699828229, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+  m_PrefabInstance: {fileID: 1981805595}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!1 &1981805599 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6696157166193041078, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
+  m_PrefabInstance: {fileID: 1981805595}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1985789129
 GameObject:
   m_ObjectHideFlags: 0

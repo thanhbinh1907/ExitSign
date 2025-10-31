@@ -54,6 +54,7 @@ MonoBehaviour:
   - UpdatePlayerBoardingStatus
   - ShowStationUI
   - KickFromRoom
+  - Rpc_EndGameSync
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

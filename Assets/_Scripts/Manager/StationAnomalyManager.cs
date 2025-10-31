@@ -11,6 +11,8 @@ public class StationAnomalyManager : MonoBehaviourPun
 	[HideInInspector]
 	public bool isStationNormal = true;
 
+	public SubwayController subwayController; // Tham chiếu đến SubwayController
+
 	private BaseAnomaly currentAnomaly = null; // Anomaly đang chạy
 
 	// Hàm này được gọi khi người chơi "vào" station
@@ -24,9 +26,20 @@ public class StationAnomalyManager : MonoBehaviourPun
 
 	void DecideAnomaly()
 	{
-		// 50% cơ hội có anomaly
-		// bool hasAnomaly = Random.Range(0, 100) < 50;
-		bool hasAnomaly = true;
+		bool hasAnomaly;
+		if (subwayController.GetCurrentStationCount() < 5)
+		{
+			hasAnomaly = Random.Range(0, 100) < 90;
+		}
+		else if (subwayController.GetCurrentStationCount() < 10)
+		{
+			hasAnomaly = Random.Range(0, 100) < 70;
+		}
+		else
+		{
+			hasAnomaly = Random.Range(0, 100) < 50;
+		}
+		// bool hasAnomaly = true;
 		int anomalyID = -1; // -1 là "bình thường"
 
 		if (hasAnomaly && allAnomalies.Count > 0)
@@ -41,7 +54,7 @@ public class StationAnomalyManager : MonoBehaviourPun
 
 	public bool hasAnomaly()
 	{
-		return isStationNormal;
+		return !isStationNormal;
 	}
 
 	[PunRPC]

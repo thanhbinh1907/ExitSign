@@ -35,20 +35,38 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	// NEW: Tham chiếu tới transform của tàu 
 	private Transform trainTransformRef = null;
 
+	// --- CODE KIỂM TRA THẮNG THUA ---
+	[Header("Game State")]
+	private GameUIManager gameUIManager; // Tham chiếu đến UI của player này
+	private StationAnomalyManager[] allStationManagers;
+	private bool hasFinishedGame = false; // Đảm bảo chỉ trigger 1 lần
+
 	void Start()
 	{
 		controller = GetComponent<CharacterController>();
+
+		// --- LOGIC TÌM UI VÀ TRẠM ---
+		if (photonView.IsMine)
+		{
+			// TÌM UI CỦA CHÍNH MÌNH (vì nó là con của prefab này)
+			gameUIManager = GetComponentInChildren<GameUIManager>();
+			if (gameUIManager == null)
+			{
+				Debug.LogError("PlayerMovement: Không tìm thấy GameUIManager trong Children!");
+			}
+
+			// Tìm tất cả các trạm (chỉ cần tìm 1 lần)
+			allStationManagers = FindObjectsOfType<StationAnomalyManager>();
+		}
+		// --- KẾT THÚC LOGIC TÌM UI ---
 
 		if (animator == null)
 		{
 			animator = GetComponent<Animator>();
 		}
 
-		// --- THAY ĐỔI BẮT ĐẦU ---
-		// Tải độ nhạy đã lưu khi game bắt đầu
-		// Sử dụng giá trị mặc định 100f nếu chưa có gì được lưu
+		// Tải độ nhạy đã lưu
 		mouseSensitivity = PlayerPrefs.GetFloat("MouseSensitivity", 100.0f);
-		// --- THAY ĐỔI KẾT THÚC ---
 
 		// 3. Gộp logic từ cả hai file vào đây
 		if (photonView.IsMine)
@@ -92,13 +110,18 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 
 	void Update()
 	{
-		// --- THAY ĐỔI BẮT ĐẦU ---
 		// Nếu game đang tạm dừng (pause), không làm gì cả
 		if (Time.timeScale == 0f)
 		{
 			return;
 		}
-		// --- THAY ĐỔI KẾT THÚC ---
+
+		// Nếu game đã kết thúc (biến hasFinishedGame được set bởi RPC)
+		// thì không cho di chuyển nữa
+		if (hasFinishedGame)
+		{
+			return;
+		}
 
 		// Tính toán train velocity nếu đang ở trên tàu và có reference tới tàu
 		if (isOnTrain && trainTransformRef != null)
@@ -117,11 +140,94 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			HandleMouseLook();
 			UpdateAnimations();
 		}
-
-		// Nếu không phải "IsMine", thì toàn bộ việc di chuyển
-		// và xoay người sẽ do PhotonTransformView lo.
-		// Animation sẽ do PhotonAnimatorView lo.
 	}
+
+	// --- LOGIC VA CHẠM VÀ KẾT THÚC GAME ---
+
+	// CharacterController dùng hàm này thay vì OnTriggerEnter
+	private void OnControllerColliderHit(ControllerColliderHit hit)
+	{
+		// Chỉ chạy nếu là player của tôi VÀ game chưa kết thúc
+		if (hasFinishedGame || !photonView.IsMine)
+		{
+			return;
+		}
+
+		// Kiểm tra xem có va chạm với trigger cuối game không (bằng Tag)
+		if (hit.gameObject.CompareTag(EndGameTrigger.EndGameTriggerTag))
+		{
+			Debug.Log("Local Player chạm vào EndGameTrigger. Gửi RPC tới tất cả...");
+
+			// 1. Đánh dấu *chính mình* đã xong để không gửi RPC 2 lần
+			hasFinishedGame = true;
+
+			// 2. Kiểm tra điều kiện thắng/thua (chỉ chạy ở máy local)
+			bool didWin = CheckGameEndCondition_GetResult();
+
+			// 3. Gửi RPC cho TẤT CẢ MỌI NGƯỜI (kể cả mình) để hiển thị màn hình
+			photonView.RPC("Rpc_EndGameSync", RpcTarget.All, didWin);
+		}
+	}
+
+	// Hàm này chỉ kiểm tra và trả về kết quả
+	private bool CheckGameEndCondition_GetResult()
+	{
+		if (allStationManagers == null || allStationManagers.Length == 0)
+		{
+			Debug.LogWarning("Không tìm thấy StationAnomalyManager nào, mặc định là THẮNG.");
+			return true; // Thắng
+		}
+
+		foreach (StationAnomalyManager manager in allStationManagers)
+		{
+			if (!manager.isStationNormal)
+			{
+				// TÌM THẤY MỘT ANOMALY CÒN SÓT LẠI!
+				Debug.Log($"THUA: Tìm thấy anomaly tại {manager.gameObject.name}!");
+				return false; // Thua
+			}
+		}
+
+		// Nếu vòng lặp chạy hết, nghĩa là tất cả đều bình thường
+		Debug.Log("THẮNG: Tất cả anomaly đã được xử lý!");
+		return true; // Thắng
+	}
+
+	// HÀM RPC ĐỂ ĐỒNG BỘ KẾT THÚC GAME
+	// Hàm này sẽ chạy trên máy của TẤT CẢ người chơi
+	[PunRPC]
+	public void Rpc_EndGameSync(bool didWin)
+	{
+		// 1. Đánh dấu game đã kết thúc cho tất cả mọi người
+		// (để ngăn người khác cũng gửi RPC nếu họ về đích sau 0.1s)
+		hasFinishedGame = true;
+
+		// 2. Tìm GameUIManager của player (trên máy của họ)
+		if (gameUIManager == null)
+		{
+			gameUIManager = GetComponentInChildren<GameUIManager>();
+		}
+
+		if (gameUIManager == null)
+		{
+			Debug.LogError($"RPC_EndGameSync: Không tìm thấy GameUIManager cho player {photonView.Owner.NickName}");
+			return;
+		}
+
+		// 3. Hiển thị màn hình tương ứng
+		if (didWin)
+		{
+			Debug.Log($"RPC: Hiển thị WIN screen cho {photonView.Owner.NickName}");
+			gameUIManager.ShowWinScreen();
+		}
+		else
+		{
+			Debug.Log($"RPC: Hiển thị LOSE screen cho {photonView.Owner.NickName}");
+			gameUIManager.ShowLoseScreen();
+		}
+	}
+
+	// --- CÁC HÀM CƠ BẢN ---
 
 	// Hàm public để set trạng thái trên tàu (giữ để tương thích)
 	public void SetOnTrain(bool onTrain)
@@ -265,7 +371,7 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		}
 	}
 
-	// --- THÊM 3 HÀM SAU ĐÂY VÀO CUỐI FILE ---
+	// --- CÁC HÀM TIỆN ÍCH KHÁC ---
 
 	// Hàm này dùng để SubwayController kiểm tra
 	public bool IsOnTrain()
@@ -324,7 +430,7 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		}
 	}
 
-	// --- HÀM MỚI ĐỂ PAUSEMANAGER GỌI ---
+	// HÀM MỚI ĐỂ PAUSEMANAGER GỌI
 	public void UpdateSensitivity(float newSensitivity)
 	{
 		mouseSensitivity = newSensitivity;

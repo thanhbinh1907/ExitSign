@@ -126,6 +126,11 @@ public class SubwayController : MonoBehaviourPun
 		}
 	}
 
+	public float GetCurrentStationCount()
+	{
+		return currentStationCount;
+	}
+
 	// Hàm này được gọi khi tàu va chạm với Trigger
 	private void OnTriggerEnter(Collider other)
 	{
