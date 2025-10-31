@@ -144,8 +144,16 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 
 	// --- LOGIC VA CHẠM VÀ KẾT THÚC GAME ---
 
-	// CharacterController dùng hàm này thay vì OnTriggerEnter
-	private void OnControllerColliderHit(ControllerColliderHit hit)
+	// XÓA HÀM OnControllerColliderHit CŨ ĐI
+	/*
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        // ... (nội dung hàm cũ)
+    }
+    */
+
+	// THÊM HÀM MỚI NÀY VÀO
+	private void OnTriggerEnter(Collider other)
 	{
 		// Chỉ chạy nếu là player của tôi VÀ game chưa kết thúc
 		if (hasFinishedGame || !photonView.IsMine)
@@ -154,7 +162,7 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		}
 
 		// Kiểm tra xem có va chạm với trigger cuối game không (bằng Tag)
-		if (hit.gameObject.CompareTag(EndGameTrigger.EndGameTriggerTag))
+		if (other.CompareTag(EndGameTrigger.EndGameTriggerTag))
 		{
 			Debug.Log("Local Player chạm vào EndGameTrigger. Gửi RPC tới tất cả...");
 

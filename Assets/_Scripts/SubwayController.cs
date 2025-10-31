@@ -49,6 +49,15 @@ public class SubwayController : MonoBehaviourPun
 		// Tìm control button
 		controlButton = FindObjectOfType<TrainControlButton>();
 
+		// --- THÊM DÒNG NÀY ĐỂ SỬA LỖI ---
+		// Giả định rằng StationAnomalyManager nằm trong scene
+		instance = FindObjectOfType<StationAnomalyManager>();
+		if (instance == null)
+		{
+			Debug.LogError("SubwayController không tìm thấy StationAnomalyManager!");
+		}
+		// --- KẾT THÚC SỬA LỖI ---
+
 		foreach (TrainDoor door in trainDoors)
 		{
 			door.Open();
