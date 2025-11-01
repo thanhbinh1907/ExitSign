@@ -100,10 +100,14 @@ public class SubwayController : MonoBehaviourPun
 					door.Open();
 				}
 
-				if (PhotonNetwork.IsMasterClient)
+				// 1. Kiểm tra xem có phải là MasterClient (MP) HOẶC là Single Player
+				bool isMasterOrSinglePlayer = (GameState.CurrentMode == GameMode.SinglePlayer) ||
+											  (GameState.CurrentMode == GameMode.Multiplayer && PhotonNetwork.IsMasterClient);
+
+				if (isMasterOrSinglePlayer)
 				{
+					// 2. Tăng số đếm trạm
 					bool hasAnomaly = instance.hasAnomaly();
-					// 1. Tăng số đếm trạm
 					if (hasAnomaly)
 					{
 						currentStationCount++;
@@ -112,17 +116,18 @@ public class SubwayController : MonoBehaviourPun
 					{
 						currentStationCount = 0;
 					}
-					Debug.Log($"Đã đến trạm: {currentStationCount}. Gửi RPC.");
+					Debug.Log($"Đã đến trạm: {currentStationCount}. Gửi thông báo.");
 
-					// 2. Gửi RPC cho TẤT CẢ người chơi để hiển thị UI
-					PlayerMovement[] allPlayers = FindObjectsOfType<PlayerMovement>();
-					foreach (PlayerMovement player in allPlayers)
+					// 3. Gửi thông báo cho TẤT CẢ người chơi (hoặc chỉ mình trong SP)
+					if (GameState.CurrentMode == GameMode.Multiplayer)
 					{
-						PhotonView playerPV = player.GetComponent<PhotonView>();
-						if (playerPV != null)
-						{
-							playerPV.RPC("ShowStationUI", RpcTarget.All, currentStationCount);
-						}
+						// Gửi MỘT RPC cho TẤT CẢ client
+						photonView.RPC("SyncStationUI", RpcTarget.All, currentStationCount);
+					}
+					else
+					{
+						// Single Player: Tự gọi hàm
+						SyncStationUI(currentStationCount);
 					}
 				}
 
@@ -244,6 +249,17 @@ public class SubwayController : MonoBehaviourPun
 				// (Hàm này sẽ tự kiểm tra "IsMine" bên trong)
 				player.TeleportPlayer(teleportOffset);
 			}
+		}
+	}
+
+	// --- HÀM MỚI ĐỂ ĐỒNG BỘ UI ---
+	[PunRPC]
+	void SyncStationUI(int stationNumber)
+	{
+		PlayerMovement[] allPlayers = FindObjectsOfType<PlayerMovement>();
+		foreach (PlayerMovement player in allPlayers)
+		{
+			player.ShowStationUI(stationNumber);
 		}
 	}
 }

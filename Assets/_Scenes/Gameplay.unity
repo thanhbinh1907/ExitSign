@@ -13638,7 +13638,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   allAnomalies:
-  - {fileID: 0}
+  - {fileID: 1226004592}
   - {fileID: 663306693}
   - {fileID: 5993548003388697086}
   - {fileID: 559237688}
@@ -19391,7 +19391,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
       propertyPath: m_TagString

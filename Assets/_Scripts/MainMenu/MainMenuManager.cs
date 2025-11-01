@@ -11,7 +11,6 @@ public class MainMenuManager : MonoBehaviour
 	public TMP_InputField playerNameInput;
 	public Button multiplayerButton;
 	public Button singlePlayerButton; // Thêm nút này
-	public Button settingButton;
 	public Button quitButton;
 
 	[Header("References")]
@@ -22,6 +21,7 @@ public class MainMenuManager : MonoBehaviour
 		// Thiết lập các button listeners
 		multiplayerButton.onClick.AddListener(OnMultiplayerClick);
 		singlePlayerButton.onClick.AddListener(OnSinglePlayerClick); // Thêm dòng này
+		quitButton.onClick.AddListener(OnQuitClick);
 
 		// Load tên người chơi đã lưu
 		string savedName = PlayerPrefs.GetString("playerName", "");
@@ -83,5 +83,11 @@ public class MainMenuManager : MonoBehaviour
 	{
 		lobbyPanel.SetActive(false);
 		mainMenuPanel.SetActive(true);
+	}
+
+	public void OnQuitClick()
+	{
+		Debug.Log("Thoát game...");
+		Application.Quit();
 	}
 }
