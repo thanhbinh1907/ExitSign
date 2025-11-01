@@ -12375,9 +12375,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1226004590}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3d2cca44820d0f4fab52848d4896c97, type: 3}
+  m_Script: {fileID: 11500000, guid: 2ad093f89c2069e489ad81508b49feda, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::OnOffAnomaly
+  m_EditorClassIdentifier: Assembly-CSharp::SwitchObjectAnomaly
+  objectA: {fileID: 326599614}
+  objectB: {fileID: 1226004590}
 --- !u!1 &1240138875
 GameObject:
   m_ObjectHideFlags: 0
@@ -13636,7 +13638,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   allAnomalies:
-  - {fileID: 1226004592}
+  - {fileID: 0}
   - {fileID: 663306693}
   - {fileID: 5993548003388697086}
   - {fileID: 559237688}
@@ -13725,6 +13727,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   playerPrefabName: Player
+  playerPrefab: {fileID: 8539148822480338147, guid: 0632b41323e3ee94bb5ae82c2dee44bb, type: 3}
 --- !u!4 &1435936663
 Transform:
   m_ObjectHideFlags: 0

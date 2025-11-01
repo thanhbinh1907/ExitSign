@@ -44,9 +44,10 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	void Start()
 	{
 		controller = GetComponent<CharacterController>();
+		bool isMyPlayer = (GameState.CurrentMode == GameMode.SinglePlayer) || photonView.IsMine;
 
 		// --- LOGIC TÌM UI VÀ TRẠM ---
-		if (photonView.IsMine)
+		if (isMyPlayer)
 		{
 			// TÌM UI CỦA CHÍNH MÌNH (vì nó là con của prefab này)
 			gameUIManager = GetComponentInChildren<GameUIManager>();
@@ -69,7 +70,7 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		mouseSensitivity = PlayerPrefs.GetFloat("MouseSensitivity", 100.0f);
 
 		// 3. Gộp logic từ cả hai file vào đây
-		if (photonView.IsMine)
+		if (isMyPlayer)
 		{
 			// Nếu là nhân vật CỦA TÔI:
 			// Khóa con trỏ chuột
@@ -131,10 +132,12 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			lastTrainPosition = currentTrainPosition;
 		}
 
+		bool isMyPlayer = (GameState.CurrentMode == GameMode.SinglePlayer) || photonView.IsMine;
+
 		// 4. DÒNG CODE QUAN TRỌNG NHẤT
 		// Chỉ chạy code di chuyển, xoay camera, và cập nhật animation
 		// NẾU ĐÂY LÀ NHÂN VẬT CỦA TÔI
-		if (photonView.IsMine)
+		if (isMyPlayer)
 		{
 			HandleMovement();
 			HandleMouseLook();
@@ -155,11 +158,8 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	// THÊM HÀM MỚI NÀY VÀO
 	private void OnTriggerEnter(Collider other)
 	{
-		// Chỉ chạy nếu là player của tôi VÀ game chưa kết thúc
-		if (hasFinishedGame || !photonView.IsMine)
-		{
-			return;
-		}
+		bool isMyPlayer = (GameState.CurrentMode == GameMode.SinglePlayer) || photonView.IsMine;
+		if (hasFinishedGame || !isMyPlayer) return;
 
 		// Kiểm tra xem có va chạm với trigger cuối game không (bằng Tag)
 		if (other.CompareTag(EndGameTrigger.EndGameTriggerTag))
@@ -172,8 +172,14 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			// 2. Kiểm tra điều kiện thắng/thua (chỉ chạy ở máy local)
 			bool didWin = CheckGameEndCondition_GetResult();
 
-			// 3. Gửi RPC cho TẤT CẢ MỌI NGƯỜI (kể cả mình) để hiển thị màn hình
-			photonView.RPC("Rpc_EndGameSync", RpcTarget.All, didWin);
+			if (GameState.CurrentMode == GameMode.Multiplayer)
+			{
+				photonView.RPC("Rpc_EndGameSync", RpcTarget.All, didWin);
+			}
+			else
+			{
+				Rpc_EndGameSync(didWin); // Gọi trực tiếp
+			}
 		}
 	}
 
@@ -206,31 +212,31 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	[PunRPC]
 	public void Rpc_EndGameSync(bool didWin)
 	{
-		// 1. Đánh dấu game đã kết thúc cho tất cả mọi người
-		// (để ngăn người khác cũng gửi RPC nếu họ về đích sau 0.1s)
 		hasFinishedGame = true;
 
-		// 2. Tìm GameUIManager của player (trên máy của họ)
+		// Kiểm tra lại `gameUIManager` một lần nữa để chắc chắn
 		if (gameUIManager == null)
 		{
 			gameUIManager = GetComponentInChildren<GameUIManager>();
 		}
 
+		// Nếu vẫn không tìm thấy, báo lỗi và thoát
 		if (gameUIManager == null)
 		{
-			Debug.LogError($"RPC_EndGameSync: Không tìm thấy GameUIManager cho player {photonView.Owner.NickName}");
+			// Log lỗi an toàn cho cả 2 chế độ
+			string playerName = (GameState.CurrentMode == GameMode.SinglePlayer) ? "SinglePlayer" : photonView.Owner.NickName;
+			Debug.LogError($"Rpc_EndGameSync: Không tìm thấy GameUIManager cho player {playerName}. Màn hình thắng/thua sẽ không hiện.");
 			return;
 		}
 
-		// 3. Hiển thị màn hình tương ứng
 		if (didWin)
 		{
-			Debug.Log($"RPC: Hiển thị WIN screen cho {photonView.Owner.NickName}");
+			Debug.Log($"RPC: Hiển thị WIN screen.");
 			gameUIManager.ShowWinScreen();
 		}
 		else
 		{
-			Debug.Log($"RPC: Hiển thị LOSE screen cho {photonView.Owner.NickName}");
+			Debug.Log($"RPC: Hiển thị LOSE screen.");
 			gameUIManager.ShowLoseScreen();
 		}
 	}
@@ -396,8 +402,9 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	// Hàm này dịch chuyển người chơi bằng CharacterController
 	public void TeleportPlayer(Vector3 offset)
 	{
+		bool isMyPlayer = (GameState.CurrentMode == GameMode.SinglePlayer) || photonView.IsMine;
 		// Chỉ client của chính mình mới có quyền di chuyển controller
-		if (photonView.IsMine)
+		if (isMyPlayer)
 		{
 			Debug.Log($"TeleportPlayer được gọi. Di chuyển bằng offset: {offset}");
 

@@ -32,21 +32,34 @@ public class TrainParentTrigger : MonoBehaviour
 	private void OnTriggerEnter(Collider other)
 	{
 		Debug.Log($"OnTriggerEnter: {other.name}");
-
 		if (other.CompareTag("Player"))
 		{
-			PhotonView playerView = other.GetComponent<PhotonView>();
-			Debug.Log($"Player detected: {other.name}, PhotonView: {playerView != null}, IsMine: {playerView?.IsMine}");
+			// Tìm script PlayerMovement
+			PlayerMovement playerMovement = other.GetComponent<PlayerMovement>();
+			if (playerMovement == null) return; // Không phải player
 
-			if (playerView != null && playerView.IsMine)
+			// Xác định xem đây có phải là player của mình không
+			bool isMyPlayer = (GameState.CurrentMode == GameMode.SinglePlayer) || (playerMovement.photonView != null && playerMovement.photonView.IsMine);
+
+			if (isMyPlayer)
 			{
-				int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
-				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã LÊN TÀU. Gửi RPC đồng bộ.");
+				// Lấy actor number (dùng 1 cho SP)
+				int actorNumber = (GameState.CurrentMode == GameMode.Multiplayer) ? PhotonNetwork.LocalPlayer.ActorNumber : 1;
+				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã LÊN TÀU.");
 
-				// 4. Dùng biến 'myPhotonView' để gọi RPC cho tất cả client
-				if (myPhotonView != null)
+				// 1. Tác vụ cục bộ: Cập nhật trạng thái tàu cho player
+				playerMovement.SetTrainTransform(trainTransform, true);
+
+				// 2. Tác vụ cập nhật UI (luôn chạy)
+				if (controlButton != null)
 				{
-					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, true);
+					controlButton.OnPlayerBoardingStatusChanged(actorNumber, true);
+				}
+
+				// 3. Tác vụ mạng (chỉ chạy ở Multiplayer)
+				if (GameState.CurrentMode == GameMode.Multiplayer && myPhotonView != null)
+				{
+					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerMovement.photonView.ViewID, true);
 					myPhotonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, actorNumber, true);
 				}
 			}
@@ -56,21 +69,31 @@ public class TrainParentTrigger : MonoBehaviour
 	private void OnTriggerExit(Collider other)
 	{
 		Debug.Log($"OnTriggerExit: {other.name}");
-
 		if (other.CompareTag("Player"))
 		{
-			PhotonView playerView = other.GetComponent<PhotonView>();
-			Debug.Log($"Player exit detected: {other.name}, PhotonView: {playerView != null}, IsMine: {playerView?.IsMine}");
+			PlayerMovement playerMovement = other.GetComponent<PlayerMovement>();
+			if (playerMovement == null) return;
 
-			if (playerView != null && playerView.IsMine)
+			bool isMyPlayer = (GameState.CurrentMode == GameMode.SinglePlayer) || (playerMovement.photonView != null && playerMovement.photonView.IsMine);
+
+			if (isMyPlayer)
 			{
-				int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
-				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã RỜI TÀU. Gửi RPC đồng bộ.");
+				int actorNumber = (GameState.CurrentMode == GameMode.Multiplayer) ? PhotonNetwork.LocalPlayer.ActorNumber : 1;
+				Debug.Log($"Người chơi (Local) ActorNumber {actorNumber} đã RỜI TÀU.");
 
-				// 4. Dùng biến 'myPhotonView'
-				if (myPhotonView != null)
+				// 1. Tác vụ cục bộ
+				playerMovement.SetTrainTransform(null, false);
+
+				// 2. Tác vụ cập nhật UI
+				if (controlButton != null)
 				{
-					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerView.ViewID, false);
+					controlButton.OnPlayerBoardingStatusChanged(actorNumber, false);
+				}
+
+				// 3. Tác vụ mạng
+				if (GameState.CurrentMode == GameMode.Multiplayer && myPhotonView != null)
+				{
+					myPhotonView.RPC("SetPlayerParent", RpcTarget.All, playerMovement.photonView.ViewID, false);
 					myPhotonView.RPC("UpdatePlayerBoardingStatus", RpcTarget.All, actorNumber, false);
 				}
 			}

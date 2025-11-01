@@ -143,17 +143,18 @@ public class SubwayController : MonoBehaviourPun
 	// Hàm này được gọi khi tàu va chạm với Trigger
 	private void OnTriggerEnter(Collider other)
 	{
-		// Kiểm tra: Tàu phải đang đi tới VÀ va chạm đúng trigger
 		if (currentState == TrainState.MovingForward && other.CompareTag(endTriggerTag))
 		{
-			// QUAN TRỌNG: Chỉ MasterClient mới được quyền
-			// gửi lệnh dịch chuyển để tránh 2 người gửi cùng lúc
-			if (PhotonNetwork.IsMasterClient)
+			if (GameState.CurrentMode == GameMode.Multiplayer)
 			{
-				Debug.Log("Tàu chạm EndTrigger. Gửi lệnh dịch chuyển về...");
-
-				// Gửi RPC cho TẤT CẢ mọi người
-				photonView.RPC("TeleportAndReturnRPC", RpcTarget.All);
+				if (PhotonNetwork.IsMasterClient)
+				{
+					photonView.RPC("TeleportAndReturnRPC", RpcTarget.All);
+				}
+			}
+			else
+			{
+				TeleportAndReturnRPC(); // Gọi trực tiếp trong Single Player
 			}
 		}
 	}
@@ -163,13 +164,17 @@ public class SubwayController : MonoBehaviourPun
 	// Hàm này sẽ được nút bấm (Button) gọi
 	public void TryStartTrain()
 	{
-		// Chỉ cho phép chạy khi tàu đang đứng yên
 		if (currentState == TrainState.Idle)
 		{
-			Debug.Log("Nút bấm được nhấn. Gửi lệnh cho tàu chạy...");
-
-			// Gửi RPC để TẤT CẢ client cùng chạy tàu
-			photonView.RPC("StartTrainRPC", RpcTarget.All);
+			Debug.Log("Lệnh cho tàu chạy...");
+			if (GameState.CurrentMode == GameMode.Multiplayer)
+			{
+				photonView.RPC("StartTrainRPC", RpcTarget.All);
+			}
+			else
+			{
+				StartTrainRPC(); // Gọi trực tiếp trong Single Player
+			}
 		}
 	}
 

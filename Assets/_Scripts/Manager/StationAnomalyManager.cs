@@ -18,7 +18,10 @@ public class StationAnomalyManager : MonoBehaviourPun
 	// Hàm này được gọi khi người chơi "vào" station
 	public void InitializeStation()
 	{
-		if (PhotonNetwork.IsMasterClient)
+		bool isMaster = (GameState.CurrentMode == GameMode.Multiplayer && PhotonNetwork.IsMasterClient)
+						|| (GameState.CurrentMode == GameMode.SinglePlayer);
+
+		if (isMaster)
 		{
 			DecideAnomaly();
 		}
@@ -49,7 +52,14 @@ public class StationAnomalyManager : MonoBehaviourPun
 		}
 
 		// Gửi thông báo RPC cho TẤT CẢ người chơi
-		photonView.RPC("SyncAnomalyState", RpcTarget.AllBuffered, anomalyID);
+		if (GameState.CurrentMode == GameMode.Multiplayer)
+		{
+			photonView.RPC("SyncAnomalyState", RpcTarget.AllBuffered, anomalyID);
+		}
+		else
+		{
+			SyncAnomalyState(anomalyID); // Gọi trực tiếp
+		}
 	}
 
 	public bool hasAnomaly()

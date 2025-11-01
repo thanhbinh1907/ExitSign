@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement; // Thêm dòng này
 
 public class MainMenuManager : MonoBehaviour
 {
@@ -9,7 +10,7 @@ public class MainMenuManager : MonoBehaviour
 	public GameObject lobbyPanel;
 	public TMP_InputField playerNameInput;
 	public Button multiplayerButton;
-	public Button singlePlayerButton;
+	public Button singlePlayerButton; // Thêm nút này
 	public Button settingButton;
 	public Button quitButton;
 
@@ -20,6 +21,7 @@ public class MainMenuManager : MonoBehaviour
 	{
 		// Thiết lập các button listeners
 		multiplayerButton.onClick.AddListener(OnMultiplayerClick);
+		singlePlayerButton.onClick.AddListener(OnSinglePlayerClick); // Thêm dòng này
 
 		// Load tên người chơi đã lưu
 		string savedName = PlayerPrefs.GetString("playerName", "");
@@ -32,14 +34,29 @@ public class MainMenuManager : MonoBehaviour
 		playerNameInput.onValueChanged.AddListener(OnPlayerNameChanged);
 	}
 
+	// HÀM MỚI
+	public void OnSinglePlayerClick()
+	{
+		// 1. Đặt trạng thái game thành SinglePlayer
+		GameState.CurrentMode = GameMode.SinglePlayer;
+		Debug.Log("Chế độ chơi đơn đã được chọn.");
+
+		// 2. Tải trực tiếp màn chơi
+		// Thay "Gameplay" bằng tên Scene game chính xác của bạn
+		SceneManager.LoadScene("Gameplay");
+	}
+
 	public void OnMultiplayerClick()
 	{
+		// Đặt trạng thái game thành Multiplayer
+		GameState.CurrentMode = GameMode.Multiplayer;
+		Debug.Log("Chế độ nhiều người chơi đã được chọn.");
+
 		// Kiểm tra tên người chơi
 		string playerName = playerNameInput.text.Trim();
 		if (string.IsNullOrEmpty(playerName))
 		{
 			Debug.LogWarning("Vui lòng nhập tên người chơi!");
-			// Có thể hiện thông báo lỗi ở đây
 			return;
 		}
 
@@ -59,13 +76,11 @@ public class MainMenuManager : MonoBehaviour
 
 	public void OnPlayerNameChanged(string newName)
 	{
-		// Cập nhật real-time
 		PlayerPrefs.SetString("playerName", newName);
 	}
 
 	public void BackToMainMenu()
 	{
-		// Gọi từ lobby để quay về main menu
 		lobbyPanel.SetActive(false);
 		mainMenuPanel.SetActive(true);
 	}

@@ -81,8 +81,27 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 	{
 		if (other.CompareTag("Player"))
 		{
-			PhotonView playerView = other.GetComponent<PhotonView>();
-			if (playerView != null && playerView.IsMine)
+			// Logic mới để kiểm tra người chơi
+			bool isMyPlayer = false;
+			if (GameState.CurrentMode == GameMode.SinglePlayer)
+			{
+				// Trong SP, chỉ cần có PlayerMovement script là đủ
+				if (other.GetComponent<PlayerMovement>() != null)
+				{
+					isMyPlayer = true;
+				}
+			}
+			else // Chế độ Multiplayer
+			{
+				PhotonView playerView = other.GetComponent<PhotonView>();
+				if (playerView != null && playerView.IsMine)
+				{
+					isMyPlayer = true;
+				}
+			}
+
+			// Nếu đúng là người chơi (local)
+			if (isMyPlayer)
 			{
 				playerInRange = true;
 				Debug.Log("Vào vùng điều khiển tàu.");
@@ -95,8 +114,26 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 	{
 		if (other.CompareTag("Player"))
 		{
-			PhotonView playerView = other.GetComponent<PhotonView>();
-			if (playerView != null && playerView.IsMine)
+			// Logic mới để kiểm tra người chơi
+			bool isMyPlayer = false;
+			if (GameState.CurrentMode == GameMode.SinglePlayer)
+			{
+				if (other.GetComponent<PlayerMovement>() != null)
+				{
+					isMyPlayer = true;
+				}
+			}
+			else // Chế độ Multiplayer
+			{
+				PhotonView playerView = other.GetComponent<PhotonView>();
+				if (playerView != null && playerView.IsMine)
+				{
+					isMyPlayer = true;
+				}
+			}
+
+			// Nếu đúng là người chơi (local)
+			if (isMyPlayer)
 			{
 				playerInRange = false;
 				Debug.Log("Rời vùng điều khiển tàu.");
@@ -151,22 +188,23 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 	bool AreAllPlayersOnTrain()
 	{
+		// NẾU LÀ SINGLEPLAYER, LUÔN COI NHƯ ĐÃ SẴN SÀNG
+		if (GameState.CurrentMode == GameMode.SinglePlayer)
+		{
+			// Chỉ cần kiểm tra xem người chơi có đang ở trong khu vực trigger không là đủ
+			return playerInRange;
+		}
+
+		// Logic cũ cho multiplayer
 		int totalPlayers = PhotonNetwork.PlayerList.Length;
 		int playersOnTrainCount = 0;
-
-		// Debug chi tiết trạng thái từng player
-		string statusDetails = "Player status: ";
 		foreach (var kvp in playersOnTrain)
 		{
 			if (kvp.Value)
 			{
 				playersOnTrainCount++;
 			}
-			statusDetails += $"[{kvp.Key}:{kvp.Value}] ";
 		}
-
-		Debug.Log($"{statusDetails}-> {playersOnTrainCount}/{totalPlayers} players on train");
-
 		return playersOnTrainCount >= totalPlayers && totalPlayers > 0;
 	}
 
@@ -186,17 +224,20 @@ public class TrainControlButton : MonoBehaviourPun, IMatchmakingCallbacks
 
 		if (!AreAllPlayersOnTrain())
 		{
-			Debug.Log("Chưa đủ tất cả người chơi lên tàu!");
+			Debug.Log("Chưa sẵn sàng để khởi động tàu!");
 			return;
 		}
 
-		Debug.Log("Tất cả người chơi đã lên tàu. Khởi động tàu!");
-
+		Debug.Log("Khởi động tàu!");
 		trainController.TryStartTrain();
 		trainStarted = true;
 		HideAllUI();
 
-		photonView.RPC("OnTrainStarted", RpcTarget.Others);
+		// Chỉ gửi RPC ở chế độ multiplayer
+		if (GameState.CurrentMode == GameMode.Multiplayer)
+		{
+			photonView.RPC("OnTrainStarted", RpcTarget.Others);
+		}
 	}
 
 	public void OnPlayerBoardingStatusChanged(int playerActorNumber, bool onTrain)
