@@ -436,11 +436,13 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	[PunRPC]
 	public void ShowStationUI(int stationNumber)
 	{
-		// Hàm này được gọi trên TẤT CẢ các client
-		// Nhưng chúng ta chỉ muốn player "của mình" (local) hiển thị UI
-		if (photonView.IsMine && stationDisplay != null)
+		bool isMyPlayer = (GameState.CurrentMode == GameMode.SinglePlayer) ||
+						  (photonView != null && photonView.IsMine);
+
+		// 2. Sử dụng biến 'isMyPlayer'
+		if (isMyPlayer && stationDisplay != null)
 		{
-			Debug.Log($"RPC: Hiển thị Station {stationNumber} cho local player.");
+			Debug.Log($"Hiển thị Station {stationNumber} cho local player.");
 			stationDisplay.ShowStation(stationNumber);
 		}
 	}

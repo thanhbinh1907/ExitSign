@@ -34,7 +34,10 @@ public class SubwayController : MonoBehaviourPun
 	private Vector3 startPosition; // Vị trí ban đầu của tàu
 	private TrainState currentState = TrainState.Idle;
 
-	private int currentStationCount = 0;
+	// --- BIẾN MỚI ---
+	// Cờ này sẽ được đặt thành true nếu chúng ta vừa hoàn thành một trạm bình thường
+	private bool shouldResetCountOnDeparture = false;
+	private int currentStationCount = 1;
 
 	// Reference đến TrainControlButton để reset khi cần
 	private TrainControlButton controlButton;
@@ -106,28 +109,35 @@ public class SubwayController : MonoBehaviourPun
 
 				if (isMasterOrSinglePlayer)
 				{
-					// 2. Tăng số đếm trạm
-					bool hasAnomaly = instance.hasAnomaly();
-					if (hasAnomaly)
-					{
-						currentStationCount++;
-					}
-					else
-					{
-						currentStationCount = 0;
-					}
-					Debug.Log($"Đã đến trạm: {currentStationCount}. Gửi thông báo.");
+					// --- BẮT ĐẦU THAY ĐỔI LOGIC ---
 
-					// 3. Gửi thông báo cho TẤT CẢ người chơi (hoặc chỉ mình trong SP)
+					// 1. HIỂN THỊ UI NGAY LẬP TỨC
+					// Hiển thị số trạm hiện tại (ví dụ: Station 2)
+					Debug.Log($"Đã đến trạm: {currentStationCount}. Gửi thông báo.");
 					if (GameState.CurrentMode == GameMode.Multiplayer)
 					{
-						// Gửi MỘT RPC cho TẤT CẢ client
 						photonView.RPC("SyncStationUI", RpcTarget.All, currentStationCount);
 					}
 					else
 					{
-						// Single Player: Tự gọi hàm
 						SyncStationUI(currentStationCount);
+					}
+
+					// 2. KIỂM TRA VÀ TÍNH TOÁN CHO LẦN SAU
+					bool hasAnomaly = instance.hasAnomaly();
+					if (hasAnomaly)
+					{
+						// Trạm này CÓ anomaly, tăng số đếm cho trạm tiếp theo
+						currentStationCount++;
+						// Đảm bảo cờ reset bị tắt (vì chúng ta đang trong chuỗi anomaly)
+						shouldResetCountOnDeparture = false;
+					}
+					else
+					{
+						// Trạm này BÌNH THƯỜNG.
+						// KHÔNG reset counter vội.
+						// Chỉ đặt cờ để báo cho hàm StartTrainRPC biết là cần reset KHI RỜI ĐI.
+						shouldResetCountOnDeparture = true;
 					}
 				}
 
@@ -193,6 +203,18 @@ public class SubwayController : MonoBehaviourPun
 	[PunRPC]
 	void StartTrainRPC()
 	{
+		// CHỈ Master Client hoặc Single Player mới có quyền reset
+		bool isMasterOrSinglePlayer = (GameState.CurrentMode == GameMode.SinglePlayer) ||
+									  (GameState.CurrentMode == GameMode.Multiplayer && PhotonNetwork.IsMasterClient);
+
+		// Nếu cờ "shouldReset" được bật (nghĩa là trạm trước là bình thường)
+		if (isMasterOrSinglePlayer && shouldResetCountOnDeparture)
+		{
+			Debug.Log("Rời trạm bình thường. Reset đếm trạm về 0.");
+			currentStationCount = 0;
+			shouldResetCountOnDeparture = false; // Xóa cờ sau khi đã reset
+		}
+
 		Debug.Log("RPC: Tàu bắt đầu di chuyển.");
 		currentState = TrainState.MovingForward;
 

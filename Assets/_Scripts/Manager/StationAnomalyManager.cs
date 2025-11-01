@@ -30,11 +30,15 @@ public class StationAnomalyManager : MonoBehaviourPun
 	void DecideAnomaly()
 	{
 		bool hasAnomaly;
-		if (subwayController.GetCurrentStationCount() < 5)
+		if (subwayController.GetCurrentStationCount() == 0)
 		{
-			hasAnomaly = Random.Range(0, 100) < 90;
+			hasAnomaly = false;
 		}
-		else if (subwayController.GetCurrentStationCount() < 10)
+		else if (subwayController.GetCurrentStationCount() < 7)
+		{
+			hasAnomaly = Random.Range(0, 100) < 99;
+		}
+		else if (subwayController.GetCurrentStationCount() < 14)
 		{
 			hasAnomaly = Random.Range(0, 100) < 70;
 		}
