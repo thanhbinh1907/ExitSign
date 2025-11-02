@@ -31,6 +31,9 @@ public class SubwayController : MonoBehaviourPun
 	[Header("Âm thanh")] // <-- THÊM MỚI
 	public AudioSource trainSoundSource; // <-- THÊM MỚI (Kéo AudioSource vào đây)
 
+	[Header("Hàng rào")]
+	public GameObject barrier;
+
 	private Vector3 startPosition; // Vị trí ban đầu của tàu
 	private TrainState currentState = TrainState.Idle;
 
@@ -71,6 +74,8 @@ public class SubwayController : MonoBehaviourPun
 		{
 			trainSoundSource.Stop();
 		}
+
+		barrier.SetActive(true);
 	}
 
 	void Update()
@@ -129,6 +134,7 @@ public class SubwayController : MonoBehaviourPun
 					{
 						// Trạm này CÓ anomaly, tăng số đếm cho trạm tiếp theo
 						currentStationCount++;
+						barrier.SetActive(false);
 						// Đảm bảo cờ reset bị tắt (vì chúng ta đang trong chuỗi anomaly)
 						shouldResetCountOnDeparture = false;
 					}
@@ -212,6 +218,7 @@ public class SubwayController : MonoBehaviourPun
 		{
 			Debug.Log("Rời trạm bình thường. Reset đếm trạm về 0.");
 			currentStationCount = 0;
+			barrier.SetActive(true);
 			shouldResetCountOnDeparture = false; // Xóa cờ sau khi đã reset
 		}
 
