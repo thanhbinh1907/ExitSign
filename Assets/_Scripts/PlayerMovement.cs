@@ -331,7 +331,7 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			isDance3 = false;
 		}
 
-		if (Input.GetKeyDown(KeyCode.Alpha1))
+		if (Input.GetKeyDown(KeyCode.T))
 		{
 			isDance1 = true;
 		}
