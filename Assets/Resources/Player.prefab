@@ -1608,13 +1608,7 @@ Animator:
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
   m_AnimatePhysics: 0
-  m_WarningMessage: "\nBinding warning: Some generic clip(s) animate transforms that
-    are already bound by a Humanoid avatar. These transforms can only be changed
-    by Humanoid clips.\n\tTransform 'Root'\n\tTransform 'Spine1'\n\tTransform 'RightFoot'\n\tTransform
-    'LeftShoulder'\n\tTransform 'RightHandThumb2'\n\tTransform 'LeftHandThumb2'\n\tTransform
-    'RightToeBase'\n\tTransform 'LeftHand'\n\tTransform 'LeftHandThumb3'\n\tTransform
-    'RightHand'\n\tand more ...\n\tFrom animation clip 'Pose_Idle'\n\tFrom animation
-    clip 'Walk_F'\n\tFrom animation clip 'Run_F'"
+  m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
