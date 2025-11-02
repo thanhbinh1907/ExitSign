@@ -292,87 +292,108 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 	// Hàm xử lý di chuyển bằng bàn phím (có điều chỉnh cho train movement)
 	void HandleMovement()
 	{
+		// --- Phần xử lý Gravity (Giữ nguyên) ---
 		if (controller.isGrounded && playerVelocity.y < 0)
 		{
 			playerVelocity.y = -2f;
 		}
 
+		// --- Lấy Input (Giữ nguyên) ---
 		float x = Input.GetAxis("Horizontal");
 		float z = Input.GetAxis("Vertical");
 
 		bool isMoving = (x != 0 || z != 0);
 		bool isShiftHeld = Input.GetKey(KeyCode.LeftShift);
 
-		if (isMoving)
+
+		// --- LOGIC ANIMATION MỚI ---
+
+		// 1. Ưu tiên kiểm tra phím Dance (1, 2, 3)
+		// Nếu nhấn phím dance, BẬT dance và TẮT tất cả di chuyển
+		if (Input.GetKeyDown(KeyCode.Alpha1))
 		{
+			isDance1 = true;
+			isDance2 = false;
+			isDance3 = false;
+			isWalking = false;
+			isRunning = false;
+		}
+		else if (Input.GetKeyDown(KeyCode.Alpha2))
+		{
+			isDance1 = false;
+			isDance2 = true;
+			isDance3 = false;
+			isWalking = false;
+			isRunning = false;
+		}
+		else if (Input.GetKeyDown(KeyCode.Alpha3))
+		{
+			isDance1 = false;
+			isDance2 = false;
+			isDance3 = true;
+			isWalking = false;
+			isRunning = false;
+		}
+		// 2. Nếu không nhấn dance, kiểm tra phím di chuyển
+		// Nếu di chuyển, TẮT tất cả dance và BẬT di chuyển
+		else if (isMoving)
+		{
+			isDance1 = false;
+			isDance2 = false;
+			isDance3 = false;
+
 			if (isShiftHeld)
 			{
 				isRunning = true;
 				isWalking = false;
-				isDance1 = false;
-				isDance2 = false;
-				isDance3 = false;
 			}
 			else
 			{
 				isWalking = true;
 				isRunning = false;
-				isDance1 = false;
-				isDance2 = false;
-				isDance3 = false;
 			}
 		}
+		// 3. Nếu không làm gì cả (không nhấn dance, không di chuyển)
+		// thì chỉ tắt di chuyển, nhưng *giữ nguyên* trạng thái dance (nếu có)
 		else
 		{
 			isWalking = false;
 			isRunning = false;
-			isDance1 = false;
-			isDance2 = false;
-			isDance3 = false;
 		}
 
-		if (Input.GetKeyDown(KeyCode.T))
-		{
-			isDance1 = true;
-		}
-		if (Input.GetKeyDown(KeyCode.Alpha2))
-		{
-			isDance2 = true;
-		}
-		if (Input.GetKeyDown(KeyCode.Alpha3))
-		{
-			isDance3 = true;
-		}
 
-		// Di chuyển thông thường
+		// --- Phần xử lý di chuyển (Controller.Move) ---
+
+		// Xác định tốc độ dựa trên trạng thái
+		float currentSpeed = 0f;
+		if (isWalking)
+			currentSpeed = walkSpeed;
+		else if (isRunning)
+			currentSpeed = runSpeed;
+		// Nếu đang dance (isDance1/2/3 = true) thì currentSpeed = 0, nhân vật đứng yên
+
 		Vector3 move = transform.right * x + transform.forward * z;
-		float currentSpeed = isRunning ? runSpeed : walkSpeed;
 
-		// QUAN TRỌNG: Nếu đang ở trên tàu, thêm train velocity
+		// Logic di chuyển trên tàu (Giữ nguyên)
 		if (isOnTrain && trainTransformRef != null)
 		{
-			// Thêm chuyển động của tàu vào movement của player
 			Vector3 trainMovement = trainVelocity * Time.deltaTime;
 			controller.Move(move.normalized * currentSpeed * Time.deltaTime + trainMovement);
 		}
 		else
 		{
-			// Di chuyển bình thường khi không ở trên tàu
 			controller.Move(move.normalized * currentSpeed * Time.deltaTime);
 		}
 
-		// Áp dụng gravity
+		// Logic gravity (Giữ nguyên)
 		if (isOnTrain)
 		{
-			// Giảm gravity khi ở trên tàu để tránh rơi xuống
 			playerVelocity.y += (gravity * 0.3f) * Time.deltaTime;
 		}
 		else
 		{
-			// Gravity bình thường
 			playerVelocity.y += gravity * Time.deltaTime;
 		}
-
 		controller.Move(playerVelocity * Time.deltaTime);
 	}
 
