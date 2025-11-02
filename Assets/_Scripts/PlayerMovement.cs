@@ -23,6 +23,9 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 
 	private bool isWalking = false;
 	private bool isRunning = false;
+	private bool isDance1 = false;
+	private bool isDance2 = false;
+	private bool isDance3 = false;
 
 	// Thêm biến để theo dõi trạng thái trên tàu
 	private bool isOnTrain = false;
@@ -306,17 +309,39 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 			{
 				isRunning = true;
 				isWalking = false;
+				isDance1 = false;
+				isDance2 = false;
+				isDance3 = false;
 			}
 			else
 			{
 				isWalking = true;
 				isRunning = false;
+				isDance1 = false;
+				isDance2 = false;
+				isDance3 = false;
 			}
 		}
 		else
 		{
 			isWalking = false;
 			isRunning = false;
+			isDance1 = false;
+			isDance2 = false;
+			isDance3 = false;
+		}
+
+		if (Input.GetKeyDown(KeyCode.Alpha1))
+		{
+			isDance1 = true;
+		}
+		if (Input.GetKeyDown(KeyCode.Alpha2))
+		{
+			isDance2 = true;
+		}
+		if (Input.GetKeyDown(KeyCode.Alpha3))
+		{
+			isDance3 = true;
 		}
 
 		// Di chuyển thông thường
@@ -358,6 +383,9 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		{
 			animator.SetBool("isWalking", isWalking);
 			animator.SetBool("isRunning", isRunning);
+			animator.SetBool("isDance1", isDance1);
+			animator.SetBool("isDance2", isDance2);
+			animator.SetBool("isDance3", isDance3);
 		}
 	}
 
