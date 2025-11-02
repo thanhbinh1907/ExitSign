@@ -147,8 +147,14 @@ public class PauseManager : MonoBehaviourPunCallbacks
 		// 2. Lặp qua và tìm script của CHÍNH MÌNH (local player)
 		foreach (PlayerMovement player in allPlayers)
 		{
-			// Dùng photonView.IsMine để đảm bảo chỉ cập nhật player của mình
-			if (player.photonView != null && player.photonView.IsMine)
+			// --- SỬA LỖI ---
+			// Kiểm tra cho cả Single Player (photonView có thể null) 
+			// và Multiplayer (photonView.IsMine)
+			// Logic này sao chép từ file PlayerMovement.cs
+			bool isMyPlayer = (GameState.CurrentMode == GameMode.SinglePlayer) ||
+							  (player.photonView != null && player.photonView.IsMine);
+
+			if (isMyPlayer)
 			{
 				// 3. Gọi hàm cập nhật
 				player.UpdateSensitivity(sensitivity);
