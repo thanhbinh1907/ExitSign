@@ -383,9 +383,9 @@ public class PlayerMovement : MonoBehaviourPun // 2. Kế thừa từ MonoBehavi
 		{
 			animator.SetBool("isWalking", isWalking);
 			animator.SetBool("isRunning", isRunning);
-			animator.SetBool("isDance1", isDance1);
-			animator.SetBool("isDance2", isDance2);
-			animator.SetBool("isDance3", isDance3);
+			animator.SetBool("IsDance1", isDance1);
+			animator.SetBool("IsDance2", isDance2);
+			animator.SetBool("IsDance3", isDance3);
 		}
 	}
 
