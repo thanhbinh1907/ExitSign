@@ -141,9 +141,24 @@ public class SubwayController : MonoBehaviourPun
 					else
 					{
 						// Trạm này BÌNH THƯỜNG.
-						// KHÔNG reset counter vội.
-						// Chỉ đặt cờ để báo cho hàm StartTrainRPC biết là cần reset KHI RỜI ĐI.
-						shouldResetCountOnDeparture = true;
+
+						// --- LOGIC MỚI ---
+						// Kiểm tra xem trạm này bình thường VÌ LÝ DO GÌ?
+						if (currentStationCount == 0)
+						{
+							// LÝ DO: Đây là trạm bình thường "thứ 2" (do reset về 0).
+							// Nhiệm vụ: Tăng count lên 1 để trạm TIẾP THEO là anomaly.
+							Debug.Log("Đã đến trạm bình thường (sau reset). Tăng count lên 1 cho vòng lặp anomaly.");
+							currentStationCount++; // Trạm sau sẽ là Trạm 1 (anomaly)
+							shouldResetCountOnDeparture = false; // KHÔNG reset nữa
+						}
+						else
+						{
+							// LÝ DO: Đây là trạm bình thường "thứ 1" (ngắt chuỗi anomaly).
+							// Nhiệm vụ: Đặt cờ để reset về 0 KHI RỜI ĐI.
+							shouldResetCountOnDeparture = true;
+						}
+						// --- KẾT THÚC LOGIC MỚI ---
 					}
 				}
 
